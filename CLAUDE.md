@@ -55,6 +55,13 @@ Create each folder when a feature first needs it.
 
 A single root `.gitignore` covers both apps.
 
+## Backend conventions
+
+- Database access uses plain SQL through psycopg 3. There is no ORM. Endpoints get a connection from the `get_conn` dependency (`app/db/connection.py`), which commits when the request succeeds and rolls back when it fails. Always pass values as `%s` parameters, never as formatted strings.
+- Schema changes go in a new numbered file in `backend/migrations/`, applied by hand in the Supabase SQL editor. Never edit a migration that has already been applied.
+- `app/config.py` is the only place that reads environment variables.
+- `GET /api/health/db` checks that the backend can reach Supabase.
+
 ## What is being built
 
 The Product Lab is a hackathon MVP: an agentic workspace that helps a product manager at an early-stage B2B SaaS company move from a vague product question to an evidence-backed decision brief. The UI is themed as a retro-futuristic science lab. The agent investigates; the PM approves actions and makes the final call.
