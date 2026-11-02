@@ -15,7 +15,11 @@ Stack: React (vite) in /frontend, fastAPI (Python,uv) in /backend, Postgres on S
 
 ## Project status
 
-Skeleton only: the backend has one route, `GET /api/health`, and the frontend is a page that calls it. There is no database, agent or lab UI yet, and no tests.
+- **Database:** the `feedback` table exists in Supabase (`backend/migrations/001_create_feedback.sql`, already applied). It is empty, and no sample data has been loaded yet. The AI columns (`theme`, `sentiment`, `urgency`, `analyzed_at`) start null and will be filled in by a later AI analysis step.
+- **Backend:** `GET /api/health`, `GET /api/health/db`, and `POST`/`GET /api/feedback` plus `GET /api/feedback/{id}`. Clients cannot set the AI fields.
+- **Frontend:** still the skeleton page that shows the backend's health status.
+- **Next:** React components on the `feature/frontend` branch. First `FeedbackForm` (POST `/api/feedback`), then `FeedbackList` (GET `/api/feedback`). Charts such as `ThemeChart` wait until the AI analysis fills in themes.
+- **Not built yet:** the agent, the frameworks, the lab UI and tests.
 
 ## Commands
 
@@ -32,7 +36,7 @@ cd frontend && npm run build             # production build to dist/
 cd frontend && npm run lint
 ```
 
-In development the Vite dev server forwards `/api/*` to `localhost:8000` (`frontend/vite.config.js`), so frontend code calls relative `/api/...` URLs. Backend secrets go in `backend/.env`; see `backend/.env.example`.
+In development the Vite dev server forwards `/api/*` to `localhost:8000` (`frontend/vite.config.ts`), so frontend code calls relative `/api/...` URLs. Backend secrets go in `backend/.env`; see `backend/.env.example`.
 
 `docs/PRD.md` is the source of truth for scope and behavior. Read it before making product or architecture decisions.
 

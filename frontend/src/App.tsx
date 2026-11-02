@@ -3,7 +3,7 @@ import './App.css'
 
 function App() {
   // "checking..." until the backend answers, then "ok" or an error message.
-  const [backendStatus, setBackendStatus] = useState('checking...')
+  const [backendStatus, setBackendStatus] = useState<string>('checking...')
 
   // Runs once when the page loads: ask the backend if it's alive.
   useEffect(() => {
@@ -12,8 +12,8 @@ function App() {
         if (!response.ok) throw new Error(`HTTP ${response.status}`)
         return response.json()
       })
-      .then((data) => setBackendStatus(data.status))
-      .catch((error) => setBackendStatus(`unreachable (${error.message})`))
+      .then((data: { status: string }) => setBackendStatus(data.status))
+      .catch((error: Error) => setBackendStatus(`unreachable (${error.message})`))
   }, [])
 
   return (
