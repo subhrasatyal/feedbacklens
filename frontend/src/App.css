@@ -124,3 +124,35 @@ main {
   display: inline;
   margin: 0;
 }
+
+/* Top themes: each theme is a button that filters the list. */
+.top-themes {
+  margin-top: 3rem;
+}
+
+.top-themes ol {
+  padding-left: 1.5rem;
+}
+
+.top-themes li {
+  margin-bottom: 0.4rem;
+}
+
+.theme-button {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: white;
+  font: inherit;
+  cursor: pointer;
+}
+
+.theme-button.selected {
+  border-color: #5b3fa8;
+  background: #e8e4f5;
+}
+
+.theme-button .count {
+  margin-left: 0.4rem;
+  color: #666;
+}

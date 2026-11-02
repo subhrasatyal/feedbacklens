@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import './App.css'
 import FeedbackForm from './components/shared/FeedbackForm'
 import FeedbackList from './components/shared/FeedbackList'
+import TopThemesPanel from './components/shared/TopThemesPanel'
 import { useFeedback } from './hooks/useFeedback'
 
 function App() {
@@ -26,6 +27,12 @@ function App() {
       <h1>The Product Lab</h1>
       <p>Backend: {backendStatus}</p>
       <FeedbackForm onSaved={feedback.refresh} />
+      <TopThemesPanel
+        themeCounts={feedback.themeCounts}
+        noThemeCount={feedback.noThemeCount}
+        selectedTheme={feedback.selectedTheme}
+        onSelectTheme={feedback.setSelectedTheme}
+      />
       <FeedbackList
         allItems={feedback.items}
         visibleItems={feedback.visibleItems}
