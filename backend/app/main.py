@@ -2,7 +2,7 @@ import psycopg
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import feedback
+from app.api import investigations
 from app.config import DATABASE_URL
 
 app = FastAPI(title="The Product Lab API")
@@ -15,7 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(feedback.router)
+app.include_router(investigations.router)
 
 
 @app.get("/api/health")
