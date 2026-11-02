@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
+  addEvidence as addEvidenceRequest,
   createInvestigation,
+  deleteEvidence,
   getInvestigation,
   listInvestigations,
   updateInvestigation,
+  type EvidenceCreate,
   type Investigation,
   type InvestigationDetail,
   type InvestigationInput,
@@ -90,5 +93,36 @@ export function useInvestigation() {
     refreshRecent()
   }
 
-  return { investigation, loading, error, recent, open, startNew, saveProblem }
+  // Add evidence to the open investigation's specimen tray. Errors go back to the caller.
+  async function addEvidence(items: EvidenceCreate[]) {
+    if (investigation === null) return
+    const saved = await addEvidenceRequest(investigation.id, items)
+    setInvestigation({ ...investigation, evidence: [...investigation.evidence, ...saved] })
+    refreshRecent()
+  }
+
+  // Remove one or more pieces of evidence. Afterwards the tray is reloaded from
+  // the backend, so it shows exactly what was removed even if one removal failed.
+  async function removeEvidence(evidenceIds: string[]) {
+    if (investigation === null) return
+    const id = investigation.id
+    try {
+      await Promise.all(evidenceIds.map((evidenceId) => deleteEvidence(id, evidenceId)))
+    } finally {
+      await load(id)
+      refreshRecent()
+    }
+  }
+
+  return {
+    investigation,
+    loading,
+    error,
+    recent,
+    open,
+    startNew,
+    saveProblem,
+    addEvidence,
+    removeEvidence,
+  }
 }

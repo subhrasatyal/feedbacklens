@@ -44,6 +44,7 @@ class EvidenceCreate(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
+    origin: str = Field(min_length=1)  # where it came from, e.g. "Customer"
     source_type: EvidenceType
     source_type_other: str | None = None
     title: str = Field(min_length=1)
@@ -66,6 +67,7 @@ class Evidence(BaseModel):
     id: UUID
     investigation_id: UUID
     source_label: str
+    origin: str | None  # null only on evidence saved before origin existed
     source_type: EvidenceType
     source_type_other: str | None
     title: str

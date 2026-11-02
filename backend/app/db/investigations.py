@@ -11,7 +11,8 @@ INVESTIGATION_COLUMNS = """
 """
 
 EVIDENCE_COLUMNS = """
-    id, investigation_id, source_label, source_type, source_type_other, title, content, created_at
+    id, investigation_id, source_label, origin, source_type, source_type_other,
+    title, content, created_at
 """
 
 # Citation label prefix per evidence type: the first interview is INT-01, and so on.
@@ -109,14 +110,15 @@ def add_evidence(
         saved.append(
             conn.execute(
                 f"""
-                insert into feedback (investigation_id, source_label, source_type,
+                insert into feedback (investigation_id, source_label, origin, source_type,
                                       source_type_other, title, content)
-                values (%s, %s, %s, %s, %s, %s)
+                values (%s, %s, %s, %s, %s, %s, %s)
                 returning {EVIDENCE_COLUMNS}
                 """,
                 (
                     investigation_id,
                     f"{prefix}-{number:02d}",
+                    item.origin,
                     item.source_type,
                     item.source_type_other,
                     item.title,

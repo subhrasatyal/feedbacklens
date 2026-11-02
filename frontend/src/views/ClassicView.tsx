@@ -1,11 +1,21 @@
 import ProblemForm from '../components/shared/ProblemForm'
 import RecentInvestigations from '../components/shared/RecentInvestigations'
+import SpecimenTray from '../components/shared/SpecimenTray'
 import { useInvestigation } from '../hooks/useInvestigation'
 
 // The plain (unthemed) view of lifecycle step 1, the Clipboard.
 function ClassicView() {
-  const { investigation, loading, error, recent, open, startNew, saveProblem } =
-    useInvestigation()
+  const {
+    investigation,
+    loading,
+    error,
+    recent,
+    open,
+    startNew,
+    saveProblem,
+    addEvidence,
+    removeEvidence,
+  } = useInvestigation()
 
   return (
     <>
@@ -44,8 +54,12 @@ function ClassicView() {
 
           {investigation && (
             <section>
-              <h2>2. Specimen tray</h2>
-              <p>Uploading evidence is the next build step.</p>
+              <h2>2. Specimen tray ({investigation.evidence.length})</h2>
+              <SpecimenTray
+                evidence={investigation.evidence}
+                onAdd={addEvidence}
+                onRemove={removeEvidence}
+              />
             </section>
           )}
         </>

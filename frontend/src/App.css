@@ -90,3 +90,82 @@ button {
   color: #555;
   font-size: 0.9rem;
 }
+
+/* Specimen tray table. */
+.table-toolbar {
+  margin-bottom: 0.5rem;
+}
+
+.evidence-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.evidence-table th,
+.evidence-table td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}
+
+.evidence-table tr.selected {
+  background: #f3f0fb;
+}
+
+.use-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Upload and paste boxes. */
+.upload-box {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px dashed #bbb;
+  border-radius: 8px;
+}
+
+.upload-box h3 {
+  margin-top: 0;
+}
+
+.staged-list {
+  list-style: none;
+  padding: 0;
+}
+
+.staged-list li,
+.inline-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.staged-name {
+  min-width: 10rem;
+  font-weight: 600;
+}
+
+.select-with-other {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+.select-with-other select,
+.select-with-other input {
+  padding: 0.4rem;
+  font: inherit;
+}
+
+/* Hidden on screen but read out by screen readers. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

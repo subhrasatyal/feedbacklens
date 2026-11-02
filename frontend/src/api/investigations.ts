@@ -17,11 +17,21 @@ export type Investigation = InvestigationInput & {
 
 export type EvidenceType = 'interview' | 'support_ticket' | 'metric' | 'document' | 'other'
 
+// A new piece of evidence to add. The backend assigns its label.
+export type EvidenceCreate = {
+  origin: string // where it came from, e.g. "Customer"
+  source_type: EvidenceType
+  source_type_other: string | null
+  title: string
+  content: string
+}
+
 // A saved piece of evidence in the specimen tray.
 export type Evidence = {
   id: string
   investigation_id: string
   source_label: string // citation label, e.g. "INT-01"
+  origin: string | null
   source_type: EvidenceType
   source_type_other: string | null
   title: string
@@ -68,6 +78,27 @@ export async function updateInvestigation(
   })
   await throwIfFailed(response)
   return response.json()
+}
+
+// Add several pieces of evidence in one request. Returns them with their labels.
+export async function addEvidence(
+  investigationId: string,
+  items: EvidenceCreate[],
+): Promise<Evidence[]> {
+  const response = await fetch(`/api/investigations/${investigationId}/evidence`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(items),
+  })
+  await throwIfFailed(response)
+  return response.json()
+}
+
+export async function deleteEvidence(investigationId: string, evidenceId: string) {
+  const response = await fetch(`/api/investigations/${investigationId}/evidence/${evidenceId}`, {
+    method: 'DELETE',
+  })
+  await throwIfFailed(response)
 }
 
 // If the backend said no, turn its reply into an Error with a readable message.
