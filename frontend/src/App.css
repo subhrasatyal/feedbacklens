@@ -4,3 +4,39 @@ main {
   padding: 0 1rem;
   font-family: system-ui, sans-serif;
 }
+
+/* Stack the form fields vertically with space between them. */
+.feedback-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.feedback-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-weight: 600;
+}
+
+.feedback-form input,
+.feedback-form select,
+.feedback-form textarea {
+  padding: 0.5rem;
+  font: inherit;
+  font-weight: normal;
+}
+
+.feedback-form button {
+  align-self: flex-start;
+  padding: 0.5rem 1rem;
+  font: inherit;
+}
+
+.form-message.success {
+  color: #1a7f37;
+}
+
+.form-message.error {
+  color: #c62828;
+}

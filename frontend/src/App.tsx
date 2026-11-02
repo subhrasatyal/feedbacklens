@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import FeedbackForm from './components/shared/FeedbackForm'
 
 function App() {
   // "checking..." until the backend answers, then "ok" or an error message.
@@ -20,6 +21,7 @@ function App() {
     <main>
       <h1>The Product Lab</h1>
       <p>Backend: {backendStatus}</p>
+      <FeedbackForm />
     </main>
   )
 }

@@ -17,8 +17,8 @@ Stack: React (vite) in /frontend, fastAPI (Python,uv) in /backend, Postgres on S
 
 - **Database:** the `feedback` table exists in Supabase (`backend/migrations/001_create_feedback.sql`, already applied). It is empty, and no sample data has been loaded yet. The AI columns (`theme`, `sentiment`, `urgency`, `analyzed_at`) start null and will be filled in by a later AI analysis step.
 - **Backend:** `GET /api/health`, `GET /api/health/db`, and `POST`/`GET /api/feedback` plus `GET /api/feedback/{id}`. Clients cannot set the AI fields.
-- **Frontend:** still the skeleton page that shows the backend's health status.
-- **Next:** React components on the `feature/frontend` branch. First `FeedbackForm` (POST `/api/feedback`), then `FeedbackList` (GET `/api/feedback`). Charts such as `ThemeChart` wait until the AI analysis fills in themes.
+- **Frontend:** TypeScript. One page that shows the backend's health status and a `FeedbackForm` (`src/components/shared/`) that saves feedback through `src/api/feedback.ts`. Rows saved through the form get the backend default `is_sample = true`.
+- **Next:** on the `feature/frontend` branch, `FeedbackList` (GET `/api/feedback`). Charts such as `ThemeChart` wait until the AI analysis fills in themes.
 - **Not built yet:** the agent, the frameworks, the lab UI and tests.
 
 ## Commands
