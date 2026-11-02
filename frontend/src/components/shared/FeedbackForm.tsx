@@ -19,7 +19,12 @@ const EMPTY_FORM = {
   occurred_at: '',
 }
 
-function FeedbackForm() {
+type Props = {
+  // Called after a successful save, so the page can reload the list.
+  onSaved: () => void
+}
+
+function FeedbackForm({ onSaved }: Props) {
   // What's currently typed into each field.
   const [form, setForm] = useState(EMPTY_FORM)
   // True while waiting for the backend, so the button can't be double-clicked.
@@ -51,6 +56,7 @@ function FeedbackForm() {
       })
       setMessage({ kind: 'success', text: `Saved "${saved.title}" as ${saved.source_label}.` })
       setForm(EMPTY_FORM)
+      onSaved()
     } catch (error) {
       setMessage({ kind: 'error', text: (error as Error).message })
     } finally {

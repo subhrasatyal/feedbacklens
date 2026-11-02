@@ -25,21 +25,31 @@ export type Feedback = FeedbackCreate & {
   analyzed_at: string | null
 }
 
+// Get all feedback, newest first.
+export async function listFeedback(): Promise<Feedback[]> {
+  const response = await fetch('/api/feedback')
+  await throwIfFailed(response)
+  return response.json()
+}
+
 export async function createFeedback(item: FeedbackCreate): Promise<Feedback> {
   const response = await fetch('/api/feedback', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(item),
   })
-
-  if (!response.ok) {
-    // FastAPI puts the reason in "detail". It's a plain string for errors we
-    // raise ourselves (e.g. a duplicate label), and a list for invalid input.
-    const body = await response.json().catch(() => ({}))
-    const message =
-      typeof body.detail === 'string' ? body.detail : `Request failed (HTTP ${response.status})`
-    throw new Error(message)
-  }
-
+  await throwIfFailed(response)
   return response.json()
+}
+
+// If the backend said no, turn its reply into an Error with a readable message.
+async function throwIfFailed(response: Response) {
+  if (response.ok) return
+
+  // FastAPI puts the reason in "detail". It's a plain string for errors we
+  // raise ourselves (e.g. a duplicate label), and a list for invalid input.
+  const body = await response.json().catch(() => ({}))
+  const message =
+    typeof body.detail === 'string' ? body.detail : `Request failed (HTTP ${response.status})`
+  throw new Error(message)
 }

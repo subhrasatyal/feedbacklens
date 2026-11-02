@@ -40,3 +40,60 @@ main {
 .form-message.error {
   color: #c62828;
 }
+
+/* Feedback list: one bordered card per item. */
+.feedback-list {
+  margin-top: 3rem;
+}
+
+.feedback-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.feedback-card h3 {
+  margin: 0.25rem 0;
+}
+
+.card-meta {
+  margin: 0;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.card-preview {
+  white-space: pre-line; /* keep the line breaks from pasted text */
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.badge {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: #e8e4f5;
+  font-size: 0.85rem;
+}
+
+.badge.muted {
+  background: #eee;
+  color: #666;
+}
+
+/* A button that looks like a text link, e.g. "Show full text". */
+.link-button {
+  display: block;
+  margin-bottom: 0.75rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #5b3fa8;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
