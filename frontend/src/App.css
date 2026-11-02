@@ -1,3 +1,5 @@
+/* Plain placeholder styling. The real design comes later. */
+
 main {
   max-width: 40rem;
   margin: 4rem auto;
@@ -5,32 +7,48 @@ main {
   font-family: system-ui, sans-serif;
 }
 
-/* Stack the form fields vertically with space between them. */
-.feedback-form {
+section {
+  margin-top: 2.5rem;
+}
+
+/* A heading with a button on the right. */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Form fields stacked vertically with space between them. */
+.stack-form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.feedback-form label {
+.stack-form label {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   font-weight: 600;
 }
 
-.feedback-form input,
-.feedback-form select,
-.feedback-form textarea {
+.stack-form input,
+.stack-form select,
+.stack-form textarea {
   padding: 0.5rem;
   font: inherit;
   font-weight: normal;
 }
 
-.feedback-form button {
+.stack-form button {
   align-self: flex-start;
-  padding: 0.5rem 1rem;
-  font: inherit;
 }
 
 .form-message.success {
@@ -41,118 +59,34 @@ main {
   color: #c62828;
 }
 
-/* Feedback list: one bordered card per item. */
-.feedback-list {
-  margin-top: 3rem;
+/* Recent investigations: each one is a full-width button. */
+.recent-list {
+  list-style: none;
+  padding: 0;
 }
 
-.feedback-card {
+.recent-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+  margin-bottom: 0.5rem;
   border: 1px solid #ddd;
   border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
+  background: white;
+  text-align: left;
 }
 
-.feedback-card h3 {
-  margin: 0.25rem 0;
+.recent-item.current {
+  border-color: #5b3fa8;
+  background: #f3f0fb;
 }
 
-.card-meta {
-  margin: 0;
-  color: #555;
-  font-size: 0.9rem;
-}
-
-.card-preview {
-  white-space: pre-line; /* keep the line breaks from pasted text */
-}
-
-.badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.badge {
-  padding: 0.15rem 0.6rem;
-  border-radius: 999px;
-  background: #e8e4f5;
-  font-size: 0.85rem;
-}
-
-.badge.muted {
-  background: #eee;
-  color: #666;
-}
-
-/* A button that looks like a text link, e.g. "Show full text". */
-.link-button {
-  display: block;
-  margin-bottom: 0.75rem;
-  padding: 0;
-  border: none;
-  background: none;
-  color: #5b3fa8;
-  font: inherit;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-/* List heading on the left, theme filter on the right. */
-.list-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.theme-filter {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.recent-question {
   font-weight: 600;
 }
 
-.theme-filter select {
-  padding: 0.4rem;
-  font: inherit;
-  font-weight: normal;
-}
-
-.link-button.inline {
-  display: inline;
-  margin: 0;
-}
-
-/* Top themes: each theme is a button that filters the list. */
-.top-themes {
-  margin-top: 3rem;
-}
-
-.top-themes ol {
-  padding-left: 1.5rem;
-}
-
-.top-themes li {
-  margin-bottom: 0.4rem;
-}
-
-.theme-button {
-  padding: 0.3rem 0.7rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  background: white;
-  font: inherit;
-  cursor: pointer;
-}
-
-.theme-button.selected {
-  border-color: #5b3fa8;
-  background: #e8e4f5;
-}
-
-.theme-button .count {
-  margin-left: 0.4rem;
-  color: #666;
+.recent-meta {
+  color: #555;
+  font-size: 0.9rem;
 }
