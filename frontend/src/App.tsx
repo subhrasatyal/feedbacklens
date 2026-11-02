@@ -26,7 +26,16 @@ function App() {
       <h1>The Product Lab</h1>
       <p>Backend: {backendStatus}</p>
       <FeedbackForm onSaved={feedback.refresh} />
-      <FeedbackList items={feedback.items} loading={feedback.loading} error={feedback.error} />
+      <FeedbackList
+        allItems={feedback.items}
+        visibleItems={feedback.visibleItems}
+        loading={feedback.loading}
+        error={feedback.error}
+        selectedTheme={feedback.selectedTheme}
+        onThemeChange={feedback.setSelectedTheme}
+        themeCounts={feedback.themeCounts}
+        noThemeCount={feedback.noThemeCount}
+      />
     </main>
   )
 }

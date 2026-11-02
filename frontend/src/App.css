@@ -97,3 +97,30 @@ main {
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* List heading on the left, theme filter on the right. */
+.list-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.theme-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.theme-filter select {
+  padding: 0.4rem;
+  font: inherit;
+  font-weight: normal;
+}
+
+.link-button.inline {
+  display: inline;
+  margin: 0;
+}

@@ -42,16 +42,14 @@ function FeedbackCard({ item }: { item: Feedback }) {
         </button>
       )}
 
-      {/* AI fields are empty until analysis runs. Say so instead of guessing. */}
+      {/* AI fields are empty until analysis runs. Show the ones that exist;
+          if there are none, say so instead of guessing. */}
       <div className="badges">
-        {item.analyzed_at === null ? (
+        {item.theme && <span className="badge">{item.theme}</span>}
+        {item.sentiment && <span className="badge">{item.sentiment}</span>}
+        {item.urgency && <span className="badge">{item.urgency} urgency</span>}
+        {!item.theme && !item.sentiment && !item.urgency && (
           <span className="badge muted">Not analyzed yet</span>
-        ) : (
-          <>
-            {item.theme && <span className="badge">{item.theme}</span>}
-            {item.sentiment && <span className="badge">{item.sentiment}</span>}
-            {item.urgency && <span className="badge">{item.urgency} urgency</span>}
-          </>
         )}
       </div>
     </article>
