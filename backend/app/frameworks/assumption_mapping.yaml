@@ -1,0 +1,45 @@
+# Assumption Mapping
+# DRAFT for PM review. Edit freely: this is product content, not code.
+
+name: Assumption Mapping
+
+what: Rank assumptions by importance and uncertainty.
+
+use_when: A plan rests on many beliefs and it's unclear which ones matter most.
+avoid_when: There's a single obvious unknown - test it directly instead.
+
+questions_answered:
+  - What must be true for this direction to succeed?
+  - Which of those beliefs are backed by evidence, and which are guesses?
+  - Which assumptions would sink the plan if they turned out to be wrong?
+  - Where should we spend our next research effort?
+
+required_inputs:
+  - The proposed direction or decision.
+  - The evidence available, so each assumption can be checked against it.
+  - Optional - known constraints (budget, timeline, team skills).
+
+procedure:
+  - List the assumptions behind the direction, covering desirability (customers want it), viability (it's worth it for the business) and feasibility (we can build it).
+  - For each assumption, note the evidence for and against it, citing labels, or mark it as having none.
+  - Rate each assumption on importance (how badly the plan fails if it's wrong) and on evidence (strong, weak, none).
+  - Place them in four groups - important and unproven, important and proven, minor and unproven, minor and proven.
+  - Pick the few important, unproven assumptions as the focus of the investigation.
+
+expected_outputs:
+  - A list of assumptions, each with its importance, evidence strength and labels.
+  - The top two or three important, unproven assumptions to test first.
+  - Gaps where no evidence exists at all.
+
+failure_modes:
+  - Listing only desirability assumptions and forgetting viability and feasibility.
+  - Rating an assumption as proven because it is widely believed internally.
+  - Producing a long list without choosing what to test first.
+  - Writing assumptions too vaguely to be tested ("customers like AI").
+
+# Extra questions for the PM before this framework is applied (defined in pm_inputs.yaml).
+pm_inputs:
+  - id: proposed_direction
+    required: true
+  - id: constraints
+    required: false

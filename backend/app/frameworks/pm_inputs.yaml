@@ -1,0 +1,33 @@
+# Extra questions for the PM, asked at the Planning station once a framework is chosen.
+# DRAFT for PM review. Each question is defined once here; a framework file lists
+# the ones it needs under `pm_inputs`, so a shared question is only asked once.
+#
+#   question            - what the PM sees
+#   help                - an example shown under the box
+#   agent_can_suggest   - true if the agent may draft an answer from the problem and
+#                         evidence; the PM must confirm or edit it before it's used
+
+proposed_direction:
+  question: What direction are you leaning towards or proposing?
+  help: e.g. Build an AI assistant that prepares the weekly report.
+  agent_can_suggest: true
+
+known_objections:
+  question: What objections have been raised so far, and by whom?
+  help: e.g. Engineering thinks it's a six-month project; Sales worries about accuracy.
+  agent_can_suggest: false
+
+observed_problem:
+  question: What specific problem have you observed? What happens, how often, and since when?
+  help: e.g. Customers spend about four hours every Monday building the weekly report.
+  agent_can_suggest: true
+
+constraints:
+  question: What constraints apply - budget, team skills, timeline?
+  help: e.g. Two engineers for one quarter; no ML expertise in-house.
+  agent_can_suggest: false
+
+customer_access:
+  question: Which customers can you reach for a test, and how?
+  help: e.g. Five design-partner accounts via their CSM, within two weeks.
+  agent_can_suggest: false
