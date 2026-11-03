@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.schemas.planning import Mode
+from app.schemas.planning import Mode, Recommendation
 
 # Must match the check constraint in migrations/002_create_investigations.sql.
 EvidenceType = Literal["interview", "support_ticket", "metric", "document", "other"]
@@ -41,6 +41,7 @@ class Investigation(InvestigationInput):
     mode: Mode | None
     framework_id: str | None
     framework_inputs: dict[str, str]
+    recommendation: Recommendation | None  # the agent's latest recommendation (mode B)
     created_at: datetime
     updated_at: datetime
 

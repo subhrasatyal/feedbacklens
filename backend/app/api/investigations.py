@@ -1,4 +1,4 @@
-"""Endpoints for the Clipboard: an investigation's problem and its specimen tray."""
+"""Endpoints for an investigation: its problem, specimen tray, approach and recommendation."""
 
 from typing import Annotated
 from uuid import UUID
@@ -6,6 +6,8 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, Response, status
 from psycopg import Connection
 
+from app.agent.claude_client import AgentError, AgentNotConfigured
+from app.agent.recommend_framework import recommend_framework
 from app.db import investigations as db
 from app.db.connection import get_conn
 from app.frameworks import FRAMEWORKS, PM_QUESTIONS, missing_required_answers
@@ -17,7 +19,7 @@ from app.schemas.investigation import (
     InvestigationDetail,
     InvestigationInput,
 )
-from app.schemas.planning import ApproachInput
+from app.schemas.planning import ApproachInput, Recommendation
 
 router = APIRouter(prefix="/api/investigations", tags=["investigations"])
 
@@ -83,6 +85,26 @@ def save_approach(
     if saved is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Investigation not found")
     return saved
+
+
+@router.post("/{investigation_id}/recommendation", response_model=Recommendation)
+def create_recommendation(investigation_id: UUID, conn: Connection = Depends(get_conn)):
+    """Mode B: the agent reads the checked evidence and recommends a framework. Takes up to a few minutes."""
+    investigation = _get_or_404(conn, investigation_id)
+    evidence = [item for item in db.list_evidence(conn, investigation_id) if item["use_by_agent"]]
+    if not evidence:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Tick Use for at least one source so the agent has something to read."
+        )
+    try:
+        recommendation = recommend_framework(investigation, evidence)
+    except AgentNotConfigured as error:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(error)) from error
+    except AgentError as error:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(error)) from error
+
+    db.save_recommendation(conn, investigation_id, recommendation.model_dump(mode="json"))
+    return recommendation
 
 
 @router.post(

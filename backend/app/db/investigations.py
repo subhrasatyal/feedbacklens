@@ -9,7 +9,7 @@ from app.schemas.investigation import EvidenceCreate, InvestigationInput
 
 INVESTIGATION_COLUMNS = """
     id, question, requested_by, decision_deadline, what_would_change,
-    mode, framework_id, framework_inputs, created_at, updated_at
+    mode, framework_id, framework_inputs, recommendation, created_at, updated_at
 """
 
 EVIDENCE_COLUMNS = """
@@ -90,6 +90,14 @@ def save_approach(
         """,
         (mode, framework_id, Jsonb(framework_inputs), investigation_id),
     ).fetchone()
+
+
+def save_recommendation(conn: Connection, investigation_id: UUID, recommendation: dict) -> None:
+    """Store the agent's latest recommendation (replacing any earlier one)."""
+    conn.execute(
+        "update investigations set recommendation = %s, updated_at = now() where id = %s",
+        (Jsonb(recommendation), investigation_id),
+    )
 
 
 def list_evidence(conn: Connection, investigation_id: UUID) -> list[dict]:
