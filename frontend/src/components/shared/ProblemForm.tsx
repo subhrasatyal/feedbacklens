@@ -46,10 +46,15 @@ function ProblemForm({ investigation, onSave }: Props) {
   }
 
   return (
-    <form className="stack-form" onSubmit={handleSubmit}>
-      <label>
+    <form className="card" onSubmit={handleSubmit} aria-labelledby="problem-heading">
+      <h2 className="h" id="problem-heading">
+        Problem or decision
+      </h2>
+
+      <label className="field">
         Question to investigate
         <textarea
+          className="input"
           required
           rows={3}
           placeholder="e.g. Several customers have requested an AI assistant. Should we build one?"
@@ -58,41 +63,47 @@ function ProblemForm({ investigation, onSave }: Props) {
         />
       </label>
 
-      <label>
-        Who is asking?
-        <input
-          required
-          placeholder="e.g. CEO, three enterprise customers"
-          value={form.requested_by}
-          onChange={(e) => updateField('requested_by', e.target.value)}
-        />
-      </label>
+      <div className="grid-2">
+        <label className="field">
+          Who is asking / stakeholders
+          <input
+            className="input"
+            required
+            placeholder="e.g. Customers via sales + leadership"
+            value={form.requested_by}
+            onChange={(e) => updateField('requested_by', e.target.value)}
+          />
+        </label>
 
-      <label>
-        Decision deadline
-        <input
-          required
-          type="date"
-          value={form.decision_deadline}
-          onChange={(e) => updateField('decision_deadline', e.target.value)}
-        />
-      </label>
+        <label className="field">
+          Decision deadline
+          <input
+            className="input"
+            required
+            type="date"
+            value={form.decision_deadline}
+            onChange={(e) => updateField('decision_deadline', e.target.value)}
+          />
+        </label>
+      </div>
 
-      <label>
+      <label className="field">
         What would change if you knew the answer? (optional)
         <textarea
+          className="input"
           rows={2}
-          placeholder="e.g. Whether we commit two engineers next quarter"
+          placeholder="e.g. Whether to commit engineering next quarter"
           value={form.what_would_change}
           onChange={(e) => updateField('what_would_change', e.target.value)}
         />
       </label>
 
-      <button type="submit" disabled={saving}>
-        {saving ? 'Saving…' : isNew ? 'Start investigation' : 'Save changes'}
-      </button>
-
-      {message && <p className={`form-message ${message.kind}`}>{message.text}</p>}
+      <div className="row">
+        <button type="submit" className={isNew ? 'btn pri' : 'btn'} disabled={saving}>
+          {saving ? 'Saving…' : isNew ? 'Start investigation' : 'Save changes'}
+        </button>
+        {message && <p className={`form-message ${message.kind}`}>{message.text}</p>}
+      </div>
     </form>
   )
 }

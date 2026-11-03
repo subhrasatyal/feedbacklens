@@ -12,7 +12,7 @@ INVESTIGATION_COLUMNS = """
 
 EVIDENCE_COLUMNS = """
     id, investigation_id, source_label, origin, source_type, source_type_other,
-    title, content, created_at
+    title, content, use_by_agent, created_at
 """
 
 # Citation label prefix per evidence type: the first interview is INT-01, and so on.
@@ -129,6 +129,23 @@ def add_evidence(
 
     _touch(conn, investigation_id)
     return saved
+
+
+def set_evidence_use(
+    conn: Connection, investigation_id: UUID, evidence_id: UUID, use_by_agent: bool
+) -> dict | None:
+    """Tick or untick Use. Returns None if the evidence isn't in this investigation."""
+    row = conn.execute(
+        f"""
+        update feedback set use_by_agent = %s
+        where id = %s and investigation_id = %s
+        returning {EVIDENCE_COLUMNS}
+        """,
+        (use_by_agent, evidence_id, investigation_id),
+    ).fetchone()
+    if row is not None:
+        _touch(conn, investigation_id)
+    return row
 
 
 def delete_evidence(conn: Connection, investigation_id: UUID, evidence_id: UUID) -> bool:

@@ -36,6 +36,7 @@ export type Evidence = {
   source_type_other: string | null
   title: string
   content: string
+  use_by_agent: boolean // the tray's Use checkbox: may the agent read this?
   created_at: string
 }
 
@@ -89,6 +90,21 @@ export async function addEvidence(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(items),
+  })
+  await throwIfFailed(response)
+  return response.json()
+}
+
+// Tick or untick Use for one piece of evidence.
+export async function setEvidenceUse(
+  investigationId: string,
+  evidenceId: string,
+  useByAgent: boolean,
+): Promise<Evidence> {
+  const response = await fetch(`/api/investigations/${investigationId}/evidence/${evidenceId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ use_by_agent: useByAgent }),
   })
   await throwIfFailed(response)
   return response.json()

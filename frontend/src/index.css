@@ -1,0 +1,17 @@
+@import './styles/tokens.css';
+
+/* Page-wide basics. Component styles live in App.css. */
+body {
+  margin: 0;
+  background: var(--color-bg);
+  font-family: var(--font-body);
+  color: var(--color-text);
+}
+
+a {
+  color: var(--color-accent);
+}
+
+a:hover {
+  color: var(--color-accent-dark);
+}

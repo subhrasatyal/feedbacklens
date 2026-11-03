@@ -62,8 +62,7 @@ function PasteEvidence({ onAdd }: Props) {
   }
 
   return (
-    <form className="stack-form upload-box" onSubmit={handleSubmit}>
-      <h3>Paste text</h3>
+    <form className="stack-form" onSubmit={handleSubmit}>
       <label>
         Text
         <textarea
@@ -87,7 +86,7 @@ function PasteEvidence({ onAdd }: Props) {
         <SelectWithOther label="Source" options={SOURCE_OPTIONS} value={source} onChange={setSource} />
         <SelectWithOther label="Type" options={TYPE_OPTIONS} value={type} onChange={setType} />
       </div>
-      <button type="submit" disabled={!ready || saving}>
+      <button type="submit" className="btn pri" disabled={!ready || saving}>
         {saving ? 'Adding…' : 'Add to tray'}
       </button>
       {message && <p className={`form-message ${message.kind}`}>{message.text}</p>}

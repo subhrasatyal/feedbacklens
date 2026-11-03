@@ -11,6 +11,7 @@ from app.db.connection import get_conn
 from app.schemas.investigation import (
     Evidence,
     EvidenceCreate,
+    EvidenceUseUpdate,
     Investigation,
     InvestigationDetail,
     InvestigationInput,
@@ -69,6 +70,20 @@ def add_evidence(
     """Add one or more pieces of evidence to the specimen tray."""
     _get_or_404(conn, investigation_id)
     return db.add_evidence(conn, investigation_id, items)
+
+
+@router.patch("/{investigation_id}/evidence/{evidence_id}", response_model=Evidence)
+def set_evidence_use(
+    investigation_id: UUID,
+    evidence_id: UUID,
+    data: EvidenceUseUpdate,
+    conn: Connection = Depends(get_conn),
+):
+    """Tick or untick Use: whether the agent may read this evidence."""
+    updated = db.set_evidence_use(conn, investigation_id, evidence_id, data.use_by_agent)
+    if updated is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Evidence not found")
+    return updated
 
 
 @router.delete(

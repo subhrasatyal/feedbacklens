@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react'
+import { useRef, useState, type DragEvent } from 'react'
 import type { EvidenceCreate } from '../../api/investigations'
 import SelectWithOther from './SelectWithOther'
 import {
@@ -26,18 +26,17 @@ type Props = {
   onAdd: (items: EvidenceCreate[]) => Promise<void>
 }
 
-// Pick several text files, give each a source and a type, then add them all at once.
+// Drop or browse for several text files, give each a source and a type, then add them all.
 function FileUpload({ onAdd }: Props) {
+  const fileInput = useRef<HTMLInputElement>(null)
+  const [dragging, setDragging] = useState(false) // a file is being dragged over the zone
   const [staged, setStaged] = useState<StagedFile[]>([])
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
 
-  async function handleFiles(event: ChangeEvent<HTMLInputElement>) {
-    const input = event.target
-    const files = Array.from(input.files ?? [])
-    input.value = '' // so choosing the same file again still triggers this
+  // Read the chosen or dropped files in the browser. Nothing is sent until "Add".
+  async function stageFiles(files: File[]) {
     setMessage(null)
-
     const accepted: StagedFile[] = []
     const problems: string[] = []
     for (const file of files) {
@@ -46,7 +45,6 @@ function FileUpload({ onAdd }: Props) {
         problems.push(`${file.name} is not a .txt or .md file`)
         continue
       }
-      // The browser reads the file; nothing is uploaded until "Add to tray".
       const content = (await file.text()).trim()
       if (content === '') {
         problems.push(`${file.name} is empty`)
@@ -62,11 +60,16 @@ function FileUpload({ onAdd }: Props) {
         })
       }
     }
-
-    setStaged([...staged, ...accepted])
+    setStaged((current) => [...current, ...accepted])
     if (problems.length > 0) {
       setMessage({ kind: 'error', text: `Skipped: ${problems.join('; ')}.` })
     }
+  }
+
+  function handleDrop(event: DragEvent) {
+    event.preventDefault() // stop the browser opening the file itself
+    setDragging(false)
+    stageFiles(Array.from(event.dataTransfer.files))
   }
 
   // Change one staged file's source or type, leaving the others as they were.
@@ -91,13 +94,53 @@ function FileUpload({ onAdd }: Props) {
   }
 
   return (
-    <div className="upload-box">
-      <h3>Upload files</h3>
-      <input type="file" multiple accept=".txt,.md,text/plain,text/markdown" onChange={handleFiles} />
+    <div>
+      <div
+        className={dragging ? 'drop-zone dragging' : 'drop-zone'}
+        onDragOver={(e) => {
+          e.preventDefault()
+          setDragging(true)
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+      >
+        {/* Upload icon */}
+        <svg
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 16V4M7 9l5-5 5 5" />
+          <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
+        </svg>
+        <span className="drop-title">Drop interviews, support tickets, metrics or docs</span>
+        <span className="muted">.txt or .md files</span>
+        <button type="button" className="btn" onClick={() => fileInput.current?.click()}>
+          Browse files
+        </button>
+        {/* The real file picker, hidden; the button above opens it. */}
+        <input
+          ref={fileInput}
+          type="file"
+          multiple
+          hidden
+          accept=".txt,.md,text/plain,text/markdown"
+          onChange={(e) => {
+            stageFiles(Array.from(e.target.files ?? []))
+            e.target.value = '' // so choosing the same file again still works
+          }}
+        />
+      </div>
 
       {staged.length > 0 && (
-        <>
-          <p>Choose a source and a type for each file:</p>
+        <div className="staged">
+          <p className="muted">Choose a source and a type for each file:</p>
           <ul className="staged-list">
             {staged.map((file) => (
               <li key={file.key}>
@@ -116,6 +159,7 @@ function FileUpload({ onAdd }: Props) {
                 />
                 <button
                   type="button"
+                  className="btn small"
                   onClick={() => setStaged(staged.filter((f) => f.key !== file.key))}
                 >
                   Don't add
@@ -123,10 +167,10 @@ function FileUpload({ onAdd }: Props) {
               </li>
             ))}
           </ul>
-          <button type="button" disabled={!allTagged || saving} onClick={handleAdd}>
+          <button type="button" className="btn pri" disabled={!allTagged || saving} onClick={handleAdd}>
             {saving ? 'Adding…' : `Add ${staged.length} to tray`}
           </button>
-        </>
+        </div>
       )}
 
       {message && <p className={`form-message ${message.kind}`}>{message.text}</p>}

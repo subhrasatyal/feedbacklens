@@ -72,7 +72,14 @@ class Evidence(BaseModel):
     source_type_other: str | None
     title: str
     content: str
+    use_by_agent: bool  # the tray's Use checkbox: may the agent read this?
     created_at: datetime
+
+
+class EvidenceUseUpdate(BaseModel):
+    """Turn the Use checkbox on or off for one piece of evidence."""
+
+    use_by_agent: bool
 
 
 class InvestigationDetail(Investigation):

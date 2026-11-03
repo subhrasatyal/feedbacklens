@@ -3,26 +3,27 @@ import './App.css'
 import ClassicView from './views/ClassicView'
 
 function App() {
-  // "checking..." until the backend answers, then "ok" or an error message.
-  const [backendStatus, setBackendStatus] = useState<string>('checking...')
+  // Null while checking or when the backend is fine; an error message if it can't be reached.
+  const [backendProblem, setBackendProblem] = useState<string | null>(null)
 
   // Runs once when the page loads: ask the backend if it's alive.
   useEffect(() => {
     fetch('/api/health')
       .then((response) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        return response.json()
       })
-      .then((data: { status: string }) => setBackendStatus(data.status))
-      .catch((error: Error) => setBackendStatus(`unreachable (${error.message})`))
+      .catch((error: Error) => setBackendProblem(error.message))
   }, [])
 
   return (
-    <main>
-      <h1>The Product Lab</h1>
-      <p>Backend: {backendStatus}</p>
+    <>
+      {backendProblem && (
+        <p className="backend-banner" role="alert">
+          The backend can't be reached ({backendProblem}). Is it running on port 8000?
+        </p>
+      )}
       <ClassicView />
-    </main>
+    </>
   )
 }
 
