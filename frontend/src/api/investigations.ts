@@ -19,12 +19,37 @@ export type ApproachInput = {
   framework_inputs: Record<string, string> // answers keyed by question id
 }
 
+// The agent's framework recommendation (mode B). Mirrors Recommendation in
+// backend/app/schemas/planning.py. Evidence, interpretation, assumptions and
+// gaps are kept in separate fields.
+export type EvidencePoint = { statement: string; evidence_refs: string[] }
+
+export type Recommendation = {
+  evidence_found: EvidencePoint[]
+  contradictions: EvidencePoint[]
+  diagnosis: string
+  framework_id: string
+  why_fits: string
+  will_uncover: string[]
+  assumptions: string[]
+  context_gaps: string[]
+  confidence: 'low' | 'medium' | 'high'
+  confidence_reason: string
+  runner_up_id: string
+  why_not: { framework_id: string; reason: string }[]
+  suggested_answers: { question_id: string; answer: string; evidence_refs: string[] }[]
+  model: string
+  sources_read: string[] // labels of the checked evidence the agent was given
+  created_at: string
+}
+
 export type Investigation = InvestigationInput & {
   id: string
   // Empty until an approach is saved at the Planning station.
   mode: Mode | null
   framework_id: string | null
   framework_inputs: Record<string, string>
+  recommendation: Recommendation | null // the agent's latest recommendation, if asked for
   created_at: string
   updated_at: string
 }
@@ -101,6 +126,14 @@ export async function saveApproach(id: string, input: ApproachInput): Promise<In
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
+  await throwIfFailed(response)
+  return response.json()
+}
+
+// Ask the agent to read the checked evidence and recommend a framework.
+// One Claude call: usually 30-60 seconds.
+export async function requestRecommendation(id: string): Promise<Recommendation> {
+  const response = await fetch(`/api/investigations/${id}/recommendation`, { method: 'POST' })
   await throwIfFailed(response)
   return response.json()
 }

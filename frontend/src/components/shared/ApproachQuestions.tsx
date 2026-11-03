@@ -3,12 +3,13 @@ import type { Framework } from '../../api/frameworks'
 type Props = {
   framework: Framework
   answers: Record<string, string>
+  suggested: Record<string, string[]> // drafts from the agent the PM hasn't edited, with cited labels
   onChange: (questionId: string, answer: string) => void
 }
 
 // "Before we start": the chosen framework's extra questions for the PM.
 // Answers are shared by question, so switching framework keeps what's been typed.
-function ApproachQuestions({ framework, answers, onChange }: Props) {
+function ApproachQuestions({ framework, answers, suggested, onChange }: Props) {
   if (framework.pm_inputs.length === 0) {
     return (
       <p className="muted">
@@ -31,6 +32,13 @@ function ApproachQuestions({ framework, answers, onChange }: Props) {
             value={answers[q.id] ?? ''}
             onChange={(e) => onChange(q.id, e.target.value)}
           />
+          {q.id in suggested && (
+            <span className="muted">
+              <span className="tag accent">Suggested by the agent</span>{' '}
+              {suggested[q.id].length > 0 && `From ${suggested[q.id].join(', ')}. `}
+              Edit it or keep it; saving the approach confirms it.
+            </span>
+          )}
           {q.help && <span className="muted">{q.help}</span>}
         </label>
       ))}

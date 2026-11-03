@@ -4,34 +4,49 @@ import { LOOP_STEPS } from './stations'
 type Props = {
   investigation: InvestigationDetail | null
   availableCount: number
-  savedFrameworkName: string | null // the approach saved at the Planning station, if any
+  frameworkNames: Record<string, string> // framework id -> display name
+  recommending: boolean // a recommendation request is running right now
   recent: Investigation[]
   onOpen: (id: string) => void
   onNew: () => void
 }
 
-type LoopState = { step: string; state: 'todo' | 'done' | 'skipped'; note: string }
+type LoopState = { step: string; state: 'todo' | 'now' | 'done' | 'skipped'; note: string }
 
-// Where each loop step stands, worked out only from saved state.
-// The agent hasn't run yet, so no step is ever "done" by the agent here.
-function loopStates(savedFrameworkName: string | null): LoopState[] {
-  return LOOP_STEPS.map((step) => {
-    if (savedFrameworkName && step === 'Diagnose') {
-      return { step, state: 'skipped', note: 'Skipped' }
+// Where each loop step stands, worked out only from saved state and the live request.
+// Steps after "Recommend framework" aren't built, so they always show as not started.
+function loopStates(
+  investigation: InvestigationDetail | null,
+  recommending: boolean,
+  names: Record<string, string>,
+): LoopState[] {
+  const rec = investigation?.recommendation ?? null
+  const savedId = investigation?.framework_id ?? null
+  const nameOf = (id: string) => names[id] ?? id
+
+  return LOOP_STEPS.map((step): LoopState => {
+    if (step === 'Diagnose') {
+      if (recommending) return { step, state: 'now', note: 'Now' }
+      if (rec) return { step, state: 'done', note: 'Done' }
+      if (savedId) return { step, state: 'skipped', note: 'Skipped' }
     }
-    if (savedFrameworkName && step === 'Recommend framework') {
-      return { step, state: 'done', note: `You picked ${savedFrameworkName}` }
+    if (step === 'Recommend framework') {
+      if (rec && savedId === rec.framework_id) {
+        return { step, state: 'done', note: `You accepted ${nameOf(savedId)}` }
+      }
+      if (savedId) return { step, state: 'done', note: `You picked ${nameOf(savedId)}` }
+      if (rec) return { step, state: 'done', note: `Suggests ${nameOf(rec.framework_id)}` }
     }
     return { step, state: 'todo', note: '' }
   })
 }
 
-// What the agent would honestly say right now, based only on saved state.
-// The agent isn't built yet, so it never claims to have read anything.
+// What the agent would honestly say right now, based only on saved state and the live request.
 function agentMessage(
   investigation: InvestigationDetail | null,
   availableCount: number,
-  savedFrameworkName: string | null,
+  recommending: boolean,
+  names: Record<string, string>,
 ) {
   if (investigation === null) {
     return 'Waiting for a problem. Describe it on the clipboard to start.'
@@ -39,10 +54,19 @@ function agentMessage(
   if (availableCount === 0) {
     return 'No sources checked yet. Add evidence and tick Use for the sources I may read.'
   }
-  if (savedFrameworkName) {
-    return `Approach saved: ${savedFrameworkName}. I'll apply it on the hypothesis board, which isn't built yet.`
-  }
   const sources = availableCount === 1 ? '1 checked source' : `${availableCount} checked sources`
+  if (recommending) {
+    return `Reading ${sources} to diagnose the problem…`
+  }
+  const savedId = investigation.framework_id
+  if (savedId) {
+    return `Approach saved: ${names[savedId] ?? savedId}. I'll apply it on the hypothesis board, which isn't built yet.`
+  }
+  const rec = investigation.recommendation
+  if (rec) {
+    const read = rec.sources_read.length
+    return `Read ${read} source${read === 1 ? '' : 's'}. I recommend ${names[rec.framework_id] ?? rec.framework_id} (${rec.confidence} confidence). You can override.`
+  }
   return `${sources} ready. I haven't read them yet; I'll read them when you ask me to diagnose at the planning station.`
 }
 
@@ -50,7 +74,8 @@ function agentMessage(
 function AgentPanel({
   investigation,
   availableCount,
-  savedFrameworkName,
+  frameworkNames,
+  recommending,
   recent,
   onOpen,
   onNew,
@@ -60,7 +85,7 @@ function AgentPanel({
       <section className="card">
         <span className="eyebrow">Investigation loop</span>
         <ol className="loop">
-          {loopStates(savedFrameworkName).map(({ step, state, note }) => (
+          {loopStates(investigation, recommending, frameworkNames).map(({ step, state, note }) => (
             <li key={step} className={`loop-item ${state}`}>
               <span className="dot" aria-hidden="true" />
               <span className="loop-step">{step}</span>
@@ -72,7 +97,7 @@ function AgentPanel({
 
       <section className="card">
         <span className="eyebrow">Agent</span>
-        <p className="agent-message">{agentMessage(investigation, availableCount, savedFrameworkName)}</p>
+        <p className="agent-message">{agentMessage(investigation, availableCount, recommending, frameworkNames)}</p>
       </section>
 
       <section className="card">

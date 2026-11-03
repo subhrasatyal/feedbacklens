@@ -3,11 +3,12 @@ import type { Framework } from '../../api/frameworks'
 type Props = {
   frameworks: Framework[]
   selectedId: string | null
+  recommendedId: string | null // the agent's pick, tagged "Recommended"
   onSelect: (id: string) => void
 }
 
 // The five framework cards: what it is, when to use it, when to avoid it, and Select.
-function FrameworkLibrary({ frameworks, selectedId, onSelect }: Props) {
+function FrameworkLibrary({ frameworks, selectedId, recommendedId, onSelect }: Props) {
   return (
     <div className="framework-grid">
       {frameworks.map((framework) => {
@@ -16,7 +17,10 @@ function FrameworkLibrary({ frameworks, selectedId, onSelect }: Props) {
           <div key={framework.id} className={selected ? 'card framework-card selected' : 'card framework-card'}>
             <div className="card-header">
               <strong>{framework.name}</strong>
-              {selected && <span className="tag accent">Selected</span>}
+              <span className="row">
+                {framework.id === recommendedId && <span className="tag accent">Recommended</span>}
+                {selected && <span className="tag accent">Selected</span>}
+              </span>
             </div>
             <p className="muted">{framework.what}</p>
             <p className="muted">

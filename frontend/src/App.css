@@ -590,3 +590,75 @@
 .loop-item.skipped .dot {
   border-style: dashed;
 }
+
+.loop-item.now {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.loop-item.now .dot {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 4px var(--color-accent-tint);
+}
+
+/* ---------- Agent recommendation card ---------- */
+
+.rec-card {
+  border: 2px solid var(--color-accent);
+}
+
+.rec-name {
+  font-size: 22px;
+}
+
+.rec-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.rec-part {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rec-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rec-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.rec-list li + li {
+  margin-top: 4px;
+}
+
+.rec-details {
+  margin-top: 12px;
+}
+
+/* The dashed "context gap" box from the wireframe. */
+.gap-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+  font-size: 13px;
+}
+
+/* A citation label such as INT-01. */
+.tag.ref {
+  height: 18px;
+  padding: 0 6px;
+  font-size: 11px;
+}

@@ -5,6 +5,7 @@ import {
   deleteEvidence,
   getInvestigation,
   listInvestigations,
+  requestRecommendation as requestRecommendationRequest,
   saveApproach as saveApproachRequest,
   setEvidenceUse as setEvidenceUseRequest,
   updateInvestigation,
@@ -43,6 +44,8 @@ export function useInvestigation() {
   const [loading, setLoading] = useState(() => readUrl().id !== null)
   const [error, setError] = useState<string | null>(null)
   const [recent, setRecent] = useState<Investigation[]>([])
+  // True only while a real recommendation request is waiting for the agent.
+  const [recommending, setRecommending] = useState(false)
 
   // Fetch one investigation. State only changes once the reply arrives.
   const load = useCallback((id: string) => {
@@ -119,6 +122,23 @@ export function useInvestigation() {
     refreshRecent()
   }
 
+  // Ask the agent for a recommendation. Errors go back to the caller.
+  async function requestRecommendation() {
+    if (investigation === null) return
+    const id = investigation.id
+    setRecommending(true)
+    try {
+      const recommendation = await requestRecommendationRequest(id)
+      // Only attach it if the same investigation is still open.
+      setInvestigation((current) =>
+        current && current.id === id ? { ...current, recommendation } : current,
+      )
+      refreshRecent()
+    } finally {
+      setRecommending(false)
+    }
+  }
+
   // Add evidence to the open investigation's specimen tray. Errors go back to the caller.
   async function addEvidence(items: EvidenceCreate[]) {
     if (investigation === null) return
@@ -156,11 +176,13 @@ export function useInvestigation() {
     loading,
     error,
     recent,
+    recommending,
     goToStation,
     open,
     startNew,
     saveProblem,
     saveApproach,
+    requestRecommendation,
     addEvidence,
     setEvidenceUse,
     removeEvidence,

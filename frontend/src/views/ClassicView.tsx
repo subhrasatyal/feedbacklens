@@ -12,8 +12,7 @@ function ClassicView() {
   const lab = useInvestigation()
   const { investigation } = lab
   const { frameworks, error: frameworksError } = useFrameworks()
-  const savedFrameworkName =
-    frameworks.find((f) => f.id === investigation?.framework_id)?.name ?? null
+  const frameworkNames = Object.fromEntries(frameworks.map((f) => [f.id, f.name]))
 
   const availableCount = investigation?.evidence.filter((item) => item.use_by_agent).length ?? 0
   // The planning station needs a saved problem and at least one source the agent may read.
@@ -37,7 +36,8 @@ function ClassicView() {
         <AgentPanel
           investigation={investigation}
           availableCount={availableCount}
-          savedFrameworkName={savedFrameworkName}
+          frameworkNames={frameworkNames}
+          recommending={lab.recommending}
           recent={lab.recent}
           onOpen={lab.open}
           onNew={lab.startNew}
@@ -66,7 +66,9 @@ function ClassicView() {
             investigation={investigation}
             frameworks={frameworks}
             frameworksError={frameworksError}
+            recommending={lab.recommending}
             onSaveApproach={lab.saveApproach}
+            onRequestRecommendation={lab.requestRecommendation}
           />
         )
       )}

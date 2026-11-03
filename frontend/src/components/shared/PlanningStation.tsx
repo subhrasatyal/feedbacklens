@@ -3,12 +3,15 @@ import type { Framework } from '../../api/frameworks'
 import type { ApproachInput, InvestigationDetail, Mode } from '../../api/investigations'
 import ApproachQuestions from './ApproachQuestions'
 import FrameworkLibrary from './FrameworkLibrary'
+import RecommendationCard from './RecommendationCard'
 
 type Props = {
   investigation: InvestigationDetail
   frameworks: Framework[]
   frameworksError: string | null
+  recommending: boolean
   onSaveApproach: (input: ApproachInput) => Promise<void>
+  onRequestRecommendation: () => Promise<void>
 }
 
 const MODES: { value: Mode; title: string; detail: string }[] = [
@@ -21,14 +24,28 @@ const MODES: { value: Mode; title: string; detail: string }[] = [
 ]
 
 // Station 2: choose how to think about the problem.
-function PlanningStation({ investigation, frameworks, frameworksError, onSaveApproach }: Props) {
+function PlanningStation({
+  investigation,
+  frameworks,
+  frameworksError,
+  recommending,
+  onSaveApproach,
+  onRequestRecommendation,
+}: Props) {
   // Start from what's saved, so reopening the station shows the saved choice.
   const [mode, setMode] = useState<Mode | null>(investigation.mode)
   const [selectedId, setSelectedId] = useState<string | null>(investigation.framework_id)
   const [answers, setAnswers] = useState<Record<string, string>>(investigation.framework_inputs)
+  // Answers the agent drafted that the PM hasn't edited yet, with the labels they cite.
+  const [suggested, setSuggested] = useState<Record<string, string[]>>({})
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
+  const [agentError, setAgentError] = useState<string | null>(null)
 
+  const recommendation = investigation.recommendation
+  const checkedLabels = investigation.evidence
+    .filter((item) => item.use_by_agent)
+    .map((item) => item.source_label)
   const selected = frameworks.find((f) => f.id === selectedId) ?? null
   const savedFramework = frameworks.find((f) => f.id === investigation.framework_id) ?? null
   const unanswered = selected?.pm_inputs.filter((q) => q.required && !answers[q.id]?.trim()) ?? []
@@ -39,16 +56,51 @@ function PlanningStation({ investigation, frameworks, frameworksError, onSaveApp
     // Choosing from the library without a mode means "I'll pick".
     if (mode === null) setMode('pick')
     setMessage(null)
+
+    // Fill in the agent's drafts for this framework's questions, but never over the PM's own text.
+    const framework = frameworks.find((f) => f.id === id)
+    if (!recommendation || !framework) return
+    const nextAnswers = { ...answers }
+    const nextSuggested = { ...suggested }
+    for (const draft of recommendation.suggested_answers) {
+      const asked = framework.pm_inputs.some((q) => q.id === draft.question_id)
+      if (asked && !nextAnswers[draft.question_id]?.trim()) {
+        nextAnswers[draft.question_id] = draft.answer
+        nextSuggested[draft.question_id] = draft.evidence_refs
+      }
+    }
+    setAnswers(nextAnswers)
+    setSuggested(nextSuggested)
+  }
+
+  function changeAnswer(id: string, text: string) {
+    setAnswers({ ...answers, [id]: text })
+    // Once the PM edits a draft, it's their answer.
+    const rest = { ...suggested }
+    delete rest[id]
+    setSuggested(rest)
+    setMessage(null)
+  }
+
+  function runAgent() {
+    setAgentError(null)
+    onRequestRecommendation().catch((error: Error) => setAgentError(error.message))
   }
 
   async function handleSave(event: FormEvent) {
     event.preventDefault()
     // Same as canSave, written out so TypeScript knows mode and selected aren't empty below.
     if (mode === null || selected === null || unanswered.length > 0) return
+    // Saving confirms the drafts shown on screen. Drafts for questions not on screen are dropped.
+    const shown = new Set(selected.pm_inputs.map((q) => q.id))
+    const toSave = Object.fromEntries(
+      Object.entries(answers).filter(([id]) => shown.has(id) || !(id in suggested)),
+    )
     setSaving(true)
     setMessage(null)
     try {
-      await onSaveApproach({ mode, framework_id: selected.id, framework_inputs: answers })
+      await onSaveApproach({ mode, framework_id: selected.id, framework_inputs: toSave })
+      setSuggested({})
       setMessage({
         kind: 'success',
         text: 'Approach saved. The hypothesis board is the next station to build.',
@@ -59,6 +111,8 @@ function PlanningStation({ investigation, frameworks, frameworksError, onSaveApp
       setSaving(false)
     }
   }
+
+  const sources = checkedLabels.length === 1 ? '1 checked source' : `${checkedLabels.length} checked sources`
 
   return (
     <>
@@ -99,15 +153,37 @@ function PlanningStation({ investigation, frameworks, frameworksError, onSaveApp
         ))}
       </fieldset>
 
-      {mode === 'recommend' && (
+      {mode === 'recommend' && !recommendation && (
         <section className="card note-card">
           <span className="eyebrow">Agent recommendation</span>
           <p className="agent-message">
-            The agent isn't connected yet, so it can't diagnose or recommend. That's the next build
-            step. You can still choose a framework below.
+            I'll read the {sources} ({checkedLabels.join(', ')}), diagnose the problem and recommend
+            one of the five frameworks, with my reasons. This takes about a minute.
           </p>
+          <button
+            type="button"
+            className="btn pri saved-tag"
+            disabled={recommending}
+            onClick={runAgent}
+          >
+            {recommending ? `Diagnosing… reading ${sources}` : 'Diagnose and recommend'}
+          </button>
         </section>
       )}
+
+      {mode === 'recommend' && recommendation && (
+        <RecommendationCard
+          recommendation={recommendation}
+          frameworks={frameworks}
+          checkedLabels={checkedLabels}
+          selectedId={selectedId}
+          recommending={recommending}
+          onChoose={selectFramework}
+          onRerun={runAgent}
+        />
+      )}
+
+      {mode === 'recommend' && agentError && <p className="form-message error">{agentError}</p>}
 
       <section className="page-heading">
         <h2 className="h">{mode === 'recommend' ? 'Or choose a framework' : 'Choose a framework'}</h2>
@@ -115,7 +191,12 @@ function PlanningStation({ investigation, frameworks, frameworksError, onSaveApp
       {frameworksError ? (
         <p className="form-message error">{frameworksError}</p>
       ) : (
-        <FrameworkLibrary frameworks={frameworks} selectedId={selectedId} onSelect={selectFramework} />
+        <FrameworkLibrary
+          frameworks={frameworks}
+          selectedId={selectedId}
+          recommendedId={mode === 'recommend' ? (recommendation?.framework_id ?? null) : null}
+          onSelect={selectFramework}
+        />
       )}
 
       {selected && (
@@ -126,10 +207,8 @@ function PlanningStation({ investigation, frameworks, frameworksError, onSaveApp
           <ApproachQuestions
             framework={selected}
             answers={answers}
-            onChange={(id, text) => {
-              setAnswers({ ...answers, [id]: text })
-              setMessage(null)
-            }}
+            suggested={suggested}
+            onChange={changeAnswer}
           />
           <div className="row">
             <button type="submit" className="btn pri" disabled={!canSave || saving}>
