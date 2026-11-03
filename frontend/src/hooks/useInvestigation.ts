@@ -5,8 +5,10 @@ import {
   deleteEvidence,
   getInvestigation,
   listInvestigations,
+  saveApproach as saveApproachRequest,
   setEvidenceUse as setEvidenceUseRequest,
   updateInvestigation,
+  type ApproachInput,
   type EvidenceCreate,
   type Investigation,
   type InvestigationDetail,
@@ -109,6 +111,14 @@ export function useInvestigation() {
     refreshRecent()
   }
 
+  // Save the Planning station's choice. Errors go back to the caller.
+  async function saveApproach(input: ApproachInput) {
+    if (investigation === null) return
+    const updated = await saveApproachRequest(investigation.id, input)
+    setInvestigation({ ...updated, evidence: investigation.evidence })
+    refreshRecent()
+  }
+
   // Add evidence to the open investigation's specimen tray. Errors go back to the caller.
   async function addEvidence(items: EvidenceCreate[]) {
     if (investigation === null) return
@@ -150,6 +160,7 @@ export function useInvestigation() {
     open,
     startNew,
     saveProblem,
+    saveApproach,
     addEvidence,
     setEvidenceUse,
     removeEvidence,

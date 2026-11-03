@@ -8,6 +8,7 @@ from psycopg import Connection
 
 from app.db import investigations as db
 from app.db.connection import get_conn
+from app.frameworks import FRAMEWORKS, PM_QUESTIONS, missing_required_answers
 from app.schemas.investigation import (
     Evidence,
     EvidenceCreate,
@@ -16,6 +17,7 @@ from app.schemas.investigation import (
     InvestigationDetail,
     InvestigationInput,
 )
+from app.schemas.planning import ApproachInput
 
 router = APIRouter(prefix="/api/investigations", tags=["investigations"])
 
@@ -55,6 +57,32 @@ def update_investigation(
     if updated is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Investigation not found")
     return updated
+
+
+@router.put("/{investigation_id}/approach", response_model=Investigation)
+def save_approach(
+    investigation_id: UUID, data: ApproachInput, conn: Connection = Depends(get_conn)
+):
+    """Save the Planning station's choice: mode, framework, and answers to its questions."""
+    if data.framework_id not in FRAMEWORKS:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Unknown framework")
+    unknown = [qid for qid in data.framework_inputs if qid not in PM_QUESTIONS]
+    if unknown:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, f"Unknown question: {', '.join(unknown)}"
+        )
+    missing = missing_required_answers(data.framework_id, data.framework_inputs)
+    if missing:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, f"Please answer: {' / '.join(missing)}"
+        )
+
+    # Store trimmed answers, dropping blank ones.
+    answers = {qid: text.strip() for qid, text in data.framework_inputs.items() if text.strip()}
+    saved = db.save_approach(conn, investigation_id, data.mode, data.framework_id, answers)
+    if saved is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Investigation not found")
+    return saved
 
 
 @router.post(

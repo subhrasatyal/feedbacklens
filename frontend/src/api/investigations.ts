@@ -9,8 +9,22 @@ export type InvestigationInput = {
   what_would_change: string | null
 }
 
+// Planning station: "I'll pick a framework" or "Recommend one for me".
+export type Mode = 'pick' | 'recommend'
+
+// The approach the PM saves at the Planning station.
+export type ApproachInput = {
+  mode: Mode
+  framework_id: string
+  framework_inputs: Record<string, string> // answers keyed by question id
+}
+
 export type Investigation = InvestigationInput & {
   id: string
+  // Empty until an approach is saved at the Planning station.
+  mode: Mode | null
+  framework_id: string | null
+  framework_inputs: Record<string, string>
   created_at: string
   updated_at: string
 }
@@ -73,6 +87,16 @@ export async function updateInvestigation(
   input: InvestigationInput,
 ): Promise<Investigation> {
   const response = await fetch(`/api/investigations/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  await throwIfFailed(response)
+  return response.json()
+}
+
+export async function saveApproach(id: string, input: ApproachInput): Promise<Investigation> {
+  const response = await fetch(`/api/investigations/${id}/approach`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),

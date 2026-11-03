@@ -504,3 +504,89 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* ---------- Planning station ---------- */
+
+.mode-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.mode-options legend {
+  margin-bottom: 8px;
+}
+
+.mode-option {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.mode-option input {
+  margin-top: 4px;
+}
+
+.mode-option.selected,
+.framework-card.selected {
+  border: 2px solid var(--color-accent);
+}
+
+.note-card {
+  border-style: dashed;
+  background: var(--color-surface-muted);
+}
+
+.framework-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.framework-card {
+  gap: 8px;
+  padding: 16px;
+}
+
+.framework-card .btn {
+  align-self: flex-start;
+}
+
+.strong {
+  color: var(--color-text);
+}
+
+.tag.accent {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.saved-tag {
+  align-self: flex-start;
+  margin-top: 6px;
+}
+
+/* Loop steps in the side panel: filled dot = done, dashed = skipped. */
+.loop-step {
+  flex: 1;
+}
+
+.loop-note {
+  font-size: 11px;
+}
+
+.loop-item.done {
+  color: var(--color-text);
+}
+
+.loop-item.done .dot {
+  background: var(--color-dot);
+}
+
+.loop-item.skipped .dot {
+  border-style: dashed;
+}

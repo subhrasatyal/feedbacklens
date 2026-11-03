@@ -6,6 +6,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.schemas.planning import Mode
+
 # Must match the check constraint in migrations/002_create_investigations.sql.
 EvidenceType = Literal["interview", "support_ticket", "metric", "document", "other"]
 
@@ -32,9 +34,13 @@ class InvestigationInput(BaseModel):
 
 
 class Investigation(InvestigationInput):
-    """What the API returns: the problem plus database-filled fields."""
+    """What the API returns: the problem, the chosen approach (if any) and database-filled fields."""
 
     id: UUID
+    # Planning station: empty until the PM saves an approach.
+    mode: Mode | None
+    framework_id: str | None
+    framework_inputs: dict[str, str]
     created_at: datetime
     updated_at: datetime
 

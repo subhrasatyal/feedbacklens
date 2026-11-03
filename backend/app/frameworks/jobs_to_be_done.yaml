@@ -1,0 +1,46 @@
+# Jobs to Be Done (JTBD)
+# DRAFT for PM review. Edit freely: this is product content, not code.
+
+name: Jobs to Be Done
+
+# One line shown on the framework card.
+what: Find the progress a customer is trying to make behind a request.
+
+use_when: A request names a solution ("build us an AI assistant") rather than a need.
+avoid_when: The need is already well understood and the open question is how to build it.
+
+questions_answered:
+  - What job is the customer trying to get done when they ask for this?
+  - In what situation does that job come up, and how often?
+  - How do they get the job done today, and what makes that painful?
+  - What would "done well" look like to them (speed, accuracy, effort, confidence)?
+  - Is the requested solution the best way to do the job, or just the most visible one?
+
+required_inputs:
+  - The request or decision, in the customer's or stakeholder's words.
+  - Evidence of customer behaviour or context, ideally interview notes or support tickets.
+  - Optional - usage data showing how customers currently do the related work.
+
+procedure:
+  - Restate the request as a solution, and set it aside for now.
+  - From the evidence, write down each situation in which customers raise the request ("When I ...").
+  - For each situation, name the job ("I want to ...") and the desired outcome ("so I can ...").
+  - Note how the job is done today (workarounds, tools, people) and what's painful about it, citing evidence labels.
+  - Group similar jobs; flag jobs mentioned by only one source.
+  - Compare the jobs with the requested solution - where does it fit, and where would something simpler do the job?
+
+expected_outputs:
+  - One to three job statements in the form "When ..., I want to ..., so I can ...", each with evidence labels.
+  - The current workaround and its main pain for each job.
+  - A judgement of how well the requested solution fits the jobs, with alternatives.
+  - Open questions about how widespread each job is.
+
+failure_modes:
+  - Writing job statements that are just the solution reworded ("I want an AI assistant").
+  - Basing a job on one vocal customer and treating it as common.
+  - Describing what customers say they want instead of what they are trying to achieve.
+  - Ignoring evidence of a job that contradicts the requested solution.
+
+# Extra questions for the PM before this framework is applied (defined in pm_inputs.yaml).
+# None: the problem and the specimen tray cover what it needs.
+pm_inputs: []

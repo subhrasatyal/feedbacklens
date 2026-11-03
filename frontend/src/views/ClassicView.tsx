@@ -1,14 +1,19 @@
 import AgentPanel from '../components/shared/AgentPanel'
 import AppShell from '../components/shared/AppShell'
 import ClipboardStation from '../components/shared/ClipboardStation'
+import PlanningStation from '../components/shared/PlanningStation'
 import StationNav from '../components/shared/StationNav'
 import { STATIONS, type StationId } from '../components/shared/stations'
+import { useFrameworks } from '../hooks/useFrameworks'
 import { useInvestigation } from '../hooks/useInvestigation'
 
 // The plain view of an investigation: the shell, the current station, and the side panel.
 function ClassicView() {
   const lab = useInvestigation()
   const { investigation } = lab
+  const { frameworks, error: frameworksError } = useFrameworks()
+  const savedFrameworkName =
+    frameworks.find((f) => f.id === investigation?.framework_id)?.name ?? null
 
   const availableCount = investigation?.evidence.filter((item) => item.use_by_agent).length ?? 0
   // The planning station needs a saved problem and at least one source the agent may read.
@@ -32,6 +37,7 @@ function ClassicView() {
         <AgentPanel
           investigation={investigation}
           availableCount={availableCount}
+          savedFrameworkName={savedFrameworkName}
           recent={lab.recent}
           onOpen={lab.open}
           onNew={lab.startNew}
@@ -53,11 +59,16 @@ function ClassicView() {
           onContinue={() => lab.goToStation('planning')}
         />
       ) : (
-        <div className="page-heading">
-          <span className="eyebrow">Station 2 · Experiment-planning station</span>
-          <h1>How should we think about this?</h1>
-          <p className="muted">The planning station is the next build step.</p>
-        </div>
+        investigation && (
+          // The key resets the station's choices when a different investigation opens.
+          <PlanningStation
+            key={investigation.id}
+            investigation={investigation}
+            frameworks={frameworks}
+            frameworksError={frameworksError}
+            onSaveApproach={lab.saveApproach}
+          />
+        )
       )}
     </AppShell>
   )

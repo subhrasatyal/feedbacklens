@@ -3,11 +3,13 @@
 from uuid import UUID
 
 from psycopg import Connection
+from psycopg.types.json import Jsonb
 
 from app.schemas.investigation import EvidenceCreate, InvestigationInput
 
 INVESTIGATION_COLUMNS = """
-    id, question, requested_by, decision_deadline, what_would_change, created_at, updated_at
+    id, question, requested_by, decision_deadline, what_would_change,
+    mode, framework_id, framework_inputs, created_at, updated_at
 """
 
 EVIDENCE_COLUMNS = """
@@ -68,6 +70,25 @@ def update_investigation(
             data.what_would_change,
             investigation_id,
         ),
+    ).fetchone()
+
+
+def save_approach(
+    conn: Connection,
+    investigation_id: UUID,
+    mode: str,
+    framework_id: str,
+    framework_inputs: dict[str, str],
+) -> dict | None:
+    """Save how the framework was chosen, which one, and the PM's answers to its questions."""
+    return conn.execute(
+        f"""
+        update investigations
+        set mode = %s, framework_id = %s, framework_inputs = %s, updated_at = now()
+        where id = %s
+        returning {INVESTIGATION_COLUMNS}
+        """,
+        (mode, framework_id, Jsonb(framework_inputs), investigation_id),
     ).fetchone()
 
 
