@@ -1,8 +1,14 @@
 import { useState, type FormEvent } from 'react'
 import type { Framework } from '../../api/frameworks'
-import type { ApproachInput, InvestigationDetail, Mode } from '../../api/investigations'
+import type {
+  ApproachInput,
+  HypothesisEdit,
+  InvestigationDetail,
+  Mode,
+} from '../../api/investigations'
 import ApproachQuestions from './ApproachQuestions'
 import FrameworkLibrary from './FrameworkLibrary'
+import HypothesisCard from './HypothesisCard'
 import RecommendationCard from './RecommendationCard'
 
 type Props = {
@@ -10,8 +16,13 @@ type Props = {
   frameworks: Framework[]
   frameworksError: string | null
   recommending: boolean
+  drafting: boolean
   onSaveApproach: (input: ApproachInput) => Promise<void>
   onRequestRecommendation: () => Promise<void>
+  onDraftHypothesis: () => Promise<void>
+  onSaveHypothesis: (input: HypothesisEdit) => Promise<void>
+  onAcceptHypothesis: () => Promise<void>
+  onRejectHypothesis: (reason: string) => Promise<void>
 }
 
 const MODES: { value: Mode; title: string; detail: string }[] = [
@@ -29,8 +40,13 @@ function PlanningStation({
   frameworks,
   frameworksError,
   recommending,
+  drafting,
   onSaveApproach,
   onRequestRecommendation,
+  onDraftHypothesis,
+  onSaveHypothesis,
+  onAcceptHypothesis,
+  onRejectHypothesis,
 }: Props) {
   // Start from what's saved, so reopening the station shows the saved choice.
   const [mode, setMode] = useState<Mode | null>(investigation.mode)
@@ -103,7 +119,7 @@ function PlanningStation({
       setSuggested({})
       setMessage({
         kind: 'success',
-        text: 'Approach saved. The hypothesis board is the next station to build.',
+        text: 'Approach saved. Next, form the hypothesis below.',
       })
     } catch (error) {
       setMessage({ kind: 'error', text: (error as Error).message })
@@ -220,6 +236,18 @@ function PlanningStation({
           </div>
           {message && <p className={`form-message ${message.kind}`}>{message.text}</p>}
         </form>
+      )}
+
+      {investigation.framework_id && (
+        <HypothesisCard
+          investigation={investigation}
+          frameworkNames={Object.fromEntries(frameworks.map((f) => [f.id, f.name]))}
+          drafting={drafting}
+          onDraft={onDraftHypothesis}
+          onSave={onSaveHypothesis}
+          onAccept={onAcceptHypothesis}
+          onReject={onRejectHypothesis}
+        />
       )}
     </>
   )

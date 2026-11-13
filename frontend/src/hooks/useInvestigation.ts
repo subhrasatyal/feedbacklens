@@ -1,16 +1,21 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
+  acceptHypothesis as acceptHypothesisRequest,
   addEvidence as addEvidenceRequest,
   createInvestigation,
   deleteEvidence,
+  draftHypothesis as draftHypothesisRequest,
   getInvestigation,
   listInvestigations,
+  rejectHypothesis as rejectHypothesisRequest,
   requestRecommendation as requestRecommendationRequest,
   saveApproach as saveApproachRequest,
+  saveHypothesis as saveHypothesisRequest,
   setEvidenceUse as setEvidenceUseRequest,
   updateInvestigation,
   type ApproachInput,
   type EvidenceCreate,
+  type HypothesisEdit,
   type Investigation,
   type InvestigationDetail,
   type InvestigationInput,
@@ -46,6 +51,8 @@ export function useInvestigation() {
   const [recent, setRecent] = useState<Investigation[]>([])
   // True only while a real recommendation request is waiting for the agent.
   const [recommending, setRecommending] = useState(false)
+  // True only while a real hypothesis-draft request is waiting for the agent.
+  const [drafting, setDrafting] = useState(false)
 
   // Fetch one investigation. State only changes once the reply arrives.
   const load = useCallback((id: string) => {
@@ -139,6 +146,42 @@ export function useInvestigation() {
     }
   }
 
+  // Keep a reply from the backend, but only if the same investigation is still open.
+  // The reply has no evidence list, so the one already on screen is kept.
+  function applyUpdate(id: string, updated: Investigation) {
+    setInvestigation((current) =>
+      current && current.id === id ? { ...updated, evidence: current.evidence } : current,
+    )
+    refreshRecent()
+  }
+
+  // Hypothesis card actions. Errors go back to the caller, which shows them on the card.
+  async function draftHypothesis() {
+    if (investigation === null) return
+    const id = investigation.id
+    setDrafting(true)
+    try {
+      applyUpdate(id, await draftHypothesisRequest(id))
+    } finally {
+      setDrafting(false)
+    }
+  }
+
+  async function saveHypothesis(input: HypothesisEdit) {
+    if (investigation === null) return
+    applyUpdate(investigation.id, await saveHypothesisRequest(investigation.id, input))
+  }
+
+  async function acceptHypothesis() {
+    if (investigation === null) return
+    applyUpdate(investigation.id, await acceptHypothesisRequest(investigation.id))
+  }
+
+  async function rejectHypothesis(reason: string) {
+    if (investigation === null) return
+    applyUpdate(investigation.id, await rejectHypothesisRequest(investigation.id, reason))
+  }
+
   // Add evidence to the open investigation's specimen tray. Errors go back to the caller.
   async function addEvidence(items: EvidenceCreate[]) {
     if (investigation === null) return
@@ -177,12 +220,17 @@ export function useInvestigation() {
     error,
     recent,
     recommending,
+    drafting,
     goToStation,
     open,
     startNew,
     saveProblem,
     saveApproach,
     requestRecommendation,
+    draftHypothesis,
+    saveHypothesis,
+    acceptHypothesis,
+    rejectHypothesis,
     addEvidence,
     setEvidenceUse,
     removeEvidence,

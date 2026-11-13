@@ -43,6 +43,25 @@ export type Recommendation = {
   created_at: string
 }
 
+// The hypothesis card at the Planning station. Mirrors backend/app/schemas/hypothesis.py.
+export type Hypothesis = {
+  statement: string // the belief to test
+  challenge_if: string // evidence that would show it's wrong
+  based_on: string[] // labels of the evidence the draft rests on (not test results)
+  rationale: string | null // the agent's "why this one"; null if the PM wrote it
+  status: 'draft' | 'accepted'
+  written_by: 'agent' | 'pm' // "pm" once the PM has written or edited it
+  framework_id: string | null // the framework saved when it was made
+  version: number // counts every hypothesis in the investigation, rejected ones too
+  created_at: string
+  updated_at: string
+}
+
+export type RejectedHypothesis = Hypothesis & { reason: string; rejected_at: string }
+
+// What the PM sends to write or edit the hypothesis.
+export type HypothesisEdit = { statement: string; challenge_if: string }
+
 export type Investigation = InvestigationInput & {
   id: string
   // Empty until an approach is saved at the Planning station.
@@ -50,6 +69,8 @@ export type Investigation = InvestigationInput & {
   framework_id: string | null
   framework_inputs: Record<string, string>
   recommendation: Recommendation | null // the agent's latest recommendation, if asked for
+  hypothesis: Hypothesis | null // empty until one is drafted or written
+  rejected_hypotheses: RejectedHypothesis[] // oldest first
   created_at: string
   updated_at: string
 }
@@ -134,6 +155,42 @@ export async function saveApproach(id: string, input: ApproachInput): Promise<In
 // One Claude call: usually 30-60 seconds.
 export async function requestRecommendation(id: string): Promise<Recommendation> {
   const response = await fetch(`/api/investigations/${id}/recommendation`, { method: 'POST' })
+  await throwIfFailed(response)
+  return response.json()
+}
+
+// Ask the agent to draft a hypothesis from the saved approach and the checked evidence.
+// One Claude call: usually under a minute. Returns the updated investigation.
+export async function draftHypothesis(id: string): Promise<Investigation> {
+  const response = await fetch(`/api/investigations/${id}/hypothesis/draft`, { method: 'POST' })
+  await throwIfFailed(response)
+  return response.json()
+}
+
+// Write a hypothesis, or edit the current one (any edit makes it a draft again).
+export async function saveHypothesis(id: string, input: HypothesisEdit): Promise<Investigation> {
+  const response = await fetch(`/api/investigations/${id}/hypothesis`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  await throwIfFailed(response)
+  return response.json()
+}
+
+export async function acceptHypothesis(id: string): Promise<Investigation> {
+  const response = await fetch(`/api/investigations/${id}/hypothesis/accept`, { method: 'POST' })
+  await throwIfFailed(response)
+  return response.json()
+}
+
+// Move the current hypothesis to the rejected list, with the PM's reason.
+export async function rejectHypothesis(id: string, reason: string): Promise<Investigation> {
+  const response = await fetch(`/api/investigations/${id}/hypothesis/reject`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  })
   await throwIfFailed(response)
   return response.json()
 }

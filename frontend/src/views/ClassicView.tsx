@@ -67,8 +67,13 @@ function ClassicView() {
             frameworks={frameworks}
             frameworksError={frameworksError}
             recommending={lab.recommending}
+            drafting={lab.drafting}
             onSaveApproach={lab.saveApproach}
             onRequestRecommendation={lab.requestRecommendation}
+            onDraftHypothesis={lab.draftHypothesis}
+            onSaveHypothesis={lab.saveHypothesis}
+            onAcceptHypothesis={lab.acceptHypothesis}
+            onRejectHypothesis={lab.rejectHypothesis}
           />
         )
       )}

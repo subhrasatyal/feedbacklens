@@ -1,9 +1,9 @@
-// The five stations of an investigation, in order (from the PM's wireframe).
+// The stations of an investigation, in order. The wireframe's separate Hypothesis
+// board was cut for the MVP: the hypothesis is a card at the end of the Planning station.
 // `built` is false until a station exists, so the step bar can't open it.
 export const STATIONS = [
   { id: 'clipboard', title: 'Clipboard', sub: 'Problem & evidence', built: true },
-  { id: 'planning', title: 'Planning station', sub: 'Choose approach', built: true },
-  { id: 'hypothesis', title: 'Hypothesis board', sub: 'Form & edit', built: false },
+  { id: 'planning', title: 'Planning station', sub: 'Approach & hypothesis', built: true },
   { id: 'investigation', title: 'Investigation', sub: 'Run approved tests', built: false },
   { id: 'results', title: 'Results chamber', sub: 'Decision brief', built: false },
 ] as const
