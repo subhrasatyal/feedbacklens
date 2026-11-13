@@ -8,6 +8,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Response, status
 from psycopg import Connection
 
 from app.agent.claude_client import AgentError, AgentNotConfigured
+from app.agent.draft_hypothesis import draft_hypothesis
 from app.agent.recommend_framework import recommend_framework
 from app.db import investigations as db
 from app.db.connection import get_conn
@@ -119,6 +120,45 @@ def _next_version(investigation: dict) -> int:
     if investigation["hypothesis"]:
         versions.append(investigation["hypothesis"]["version"])
     return max(versions, default=0) + 1
+
+
+@router.post("/{investigation_id}/hypothesis/draft", response_model=Investigation)
+def create_hypothesis_draft(investigation_id: UUID, conn: Connection = Depends(get_conn)):
+    """The agent drafts a hypothesis from the saved approach and the checked evidence. Takes up to a minute."""
+    investigation = _get_or_404(conn, investigation_id)
+    if investigation["framework_id"] is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Save an approach before drafting a hypothesis.")
+    if investigation["hypothesis"] is not None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "There is already a hypothesis. Reject it (with a reason) to get a new draft.",
+        )
+    evidence = [item for item in db.list_evidence(conn, investigation_id) if item["use_by_agent"]]
+    if not evidence:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Tick Use for at least one source so the agent has something to read."
+        )
+
+    try:
+        draft = draft_hypothesis(investigation, evidence)
+    except AgentNotConfigured as error:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(error)) from error
+    except AgentError as error:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(error)) from error
+
+    hypothesis = {
+        "statement": draft.statement,
+        "challenge_if": draft.challenge_if,
+        "based_on": sorted(set(draft.based_on)),
+        "rationale": draft.rationale,
+        "status": "draft",
+        "written_by": "agent",
+        "framework_id": investigation["framework_id"],
+        "version": _next_version(investigation),
+        "created_at": _now(),
+        "updated_at": _now(),
+    }
+    return db.save_hypothesis(conn, investigation_id, hypothesis)
 
 
 @router.put("/{investigation_id}/hypothesis", response_model=Investigation)

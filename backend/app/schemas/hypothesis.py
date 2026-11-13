@@ -31,6 +31,15 @@ class RejectedHypothesis(Hypothesis):
     rejected_at: datetime
 
 
+class HypothesisDraft(BaseModel):
+    """What Claude returns when drafting a hypothesis (structured output)."""
+
+    statement: str  # one or two sentences: the belief to test
+    challenge_if: str  # concrete evidence that would show it's wrong
+    based_on: list[str]  # labels of the evidence the draft rests on
+    rationale: str  # one line: why this hypothesis, given the framework and evidence
+
+
 class HypothesisEdit(BaseModel):
     """What the PM sends to write or edit the hypothesis."""
 

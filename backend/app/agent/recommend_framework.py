@@ -8,10 +8,9 @@ evidence label must really exist, so the agent can't cite evidence it wasn't giv
 
 from datetime import datetime, timezone
 
-import anthropic
 import yaml
 
-from app.agent.claude_client import MODEL, AgentError, get_client
+from app.agent.claude_client import AgentError, ask_structured, evidence_text
 from app.frameworks import FRAMEWORKS, PM_QUESTIONS
 from app.schemas.planning import FrameworkRecommendation, Recommendation
 
@@ -46,7 +45,7 @@ Rules:
 """
 
 
-def _problem_text(investigation: dict) -> str:
+def problem_text(investigation: dict) -> str:
     lines = [
         f"Question to investigate: {investigation['question']}",
         f"Asked by: {investigation['requested_by']}",
@@ -64,18 +63,6 @@ def _frameworks_text() -> str:
     # The PM's questions are left out: they're about running a framework, not choosing one.
     definitions = [f.model_dump(exclude={"pm_inputs"}) for f in FRAMEWORKS.values()]
     return yaml.safe_dump(definitions, sort_keys=False, allow_unicode=True)
-
-
-def _evidence_text(evidence: list[dict]) -> str:
-    parts = []
-    for item in evidence:
-        kind = item["source_type_other"] or item["source_type"]
-        parts.append(
-            f'<evidence label="{item["source_label"]}" type="{kind}" '
-            f'source="{item["origin"] or "unknown"}" title="{item["title"]}">\n'
-            f"{item['content']}\n</evidence>"
-        )
-    return "\n\n".join(parts)
 
 
 def _suggestable_text() -> str:
@@ -115,52 +102,21 @@ def _check(answer: FrameworkRecommendation, labels: set[str]) -> None:
 
 def recommend_framework(investigation: dict, evidence: list[dict]) -> Recommendation:
     """Ask Claude for a recommendation. `evidence` must be only the checked (Use) evidence."""
-    client = get_client()
     prompt = (
-        f"<problem>\n{_problem_text(investigation)}\n</problem>\n\n"
+        f"<problem>\n{problem_text(investigation)}\n</problem>\n\n"
         f"<frameworks>\n{_frameworks_text()}</frameworks>\n\n"
-        f"<evidence_tray>\n{_evidence_text(evidence)}\n</evidence_tray>\n\n"
+        f"<evidence_tray>\n{evidence_text(evidence)}\n</evidence_tray>\n\n"
         f"Questions you may draft answers for:\n{_suggestable_text()}\n\n"
         "Diagnose the problem and recommend a framework."
     )
 
-    try:
-        message = client.beta.messages.parse(
-            model=MODEL,
-            max_tokens=16000,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": prompt}],
-            output_format=FrameworkRecommendation,
-            output_config={"effort": "high"},
-            # If a safety check declines the request, the API retries it on a recommended fallback model.
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",
-        )
-    except anthropic.AuthenticationError as error:
-        raise AgentError("The Anthropic API key in backend/.env was rejected. Check it and restart.") from error
-    except anthropic.RateLimitError as error:
-        raise AgentError("The agent is rate-limited right now. Wait a minute and re-run.") from error
-    except anthropic.APIConnectionError as error:
-        raise AgentError("Couldn't reach the Anthropic API. Check your internet connection.") from error
-    except anthropic.APIStatusError as error:
-        # Show the API's own one-line explanation (e.g. "credit balance is too low"), not the raw response.
-        body = error.body if isinstance(error.body, dict) else {}
-        detail = body.get("error", {}).get("message") or error.message
-        raise AgentError(f"The Anthropic API returned an error ({error.status_code}): {detail}") from error
-
-    if message.stop_reason == "refusal":
-        raise AgentError("The agent declined this request, so there is no recommendation.")
-    if message.stop_reason == "max_tokens":
-        raise AgentError("The agent's answer was cut off before it finished. Please re-run.")
-    answer = message.parsed_output
-    if answer is None:
-        raise AgentError("The agent's answer wasn't in the expected format. Please re-run.")
+    answer, model = ask_structured(SYSTEM_PROMPT, prompt, FrameworkRecommendation)
 
     labels = {item["source_label"] for item in evidence}
     _check(answer, labels)
     return Recommendation(
         **answer.model_dump(),
-        model=message.model,
+        model=model,
         sources_read=sorted(labels),
         created_at=datetime.now(timezone.utc),
     )
