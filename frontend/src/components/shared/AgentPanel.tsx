@@ -6,6 +6,7 @@ type Props = {
   availableCount: number
   frameworkNames: Record<string, string> // framework id -> display name
   recommending: boolean // a recommendation request is running right now
+  drafting: boolean // a hypothesis-draft request is running right now
   recent: Investigation[]
   onOpen: (id: string) => void
   onNew: () => void
@@ -13,11 +14,12 @@ type Props = {
 
 type LoopState = { step: string; state: 'todo' | 'now' | 'done' | 'skipped'; note: string }
 
-// Where each loop step stands, worked out only from saved state and the live request.
-// Steps after "Recommend framework" aren't built, so they always show as not started.
+// Where each loop step stands, worked out only from saved state and the live requests.
+// Steps after "Form hypothesis" aren't built, so they always show as not started.
 function loopStates(
   investigation: InvestigationDetail | null,
   recommending: boolean,
+  drafting: boolean,
   names: Record<string, string>,
 ): LoopState[] {
   const rec = investigation?.recommendation ?? null
@@ -37,15 +39,23 @@ function loopStates(
       if (savedId) return { step, state: 'done', note: `You picked ${nameOf(savedId)}` }
       if (rec) return { step, state: 'done', note: `Suggests ${nameOf(rec.framework_id)}` }
     }
+    if (step === 'Form hypothesis') {
+      const hyp = investigation?.hypothesis ?? null
+      if (drafting) return { step, state: 'now', note: 'Drafting' }
+      if (hyp?.status === 'accepted') return { step, state: 'done', note: `You accepted v${hyp.version}` }
+      if (hyp) return { step, state: 'now', note: `Draft v${hyp.version}` }
+      if (savedId) return { step, state: 'now', note: 'Next' }
+    }
     return { step, state: 'todo', note: '' }
   })
 }
 
-// What the agent would honestly say right now, based only on saved state and the live request.
+// What the agent would honestly say right now, based only on saved state and the live requests.
 function agentMessage(
   investigation: InvestigationDetail | null,
   availableCount: number,
   recommending: boolean,
+  drafting: boolean,
   names: Record<string, string>,
 ) {
   if (investigation === null) {
@@ -59,8 +69,23 @@ function agentMessage(
     return `Reading ${sources} to diagnose the problem…`
   }
   const savedId = investigation.framework_id
+  const framework = savedId ? (names[savedId] ?? savedId) : ''
+  if (drafting) {
+    return `Drafting a hypothesis with ${framework}, reading ${sources}…`
+  }
+  const hyp = investigation.hypothesis
+  if (hyp?.status === 'accepted') {
+    return `You accepted hypothesis v${hyp.version}. It's still untested. Next I'd work out what evidence would support or challenge it, but the investigation station isn't built yet.`
+  }
+  if (hyp && hyp.written_by === 'agent') {
+    const cited = hyp.based_on.length
+    return `I drafted hypothesis v${hyp.version} from ${cited} source${cited === 1 ? '' : 's'}. Edit it, accept it, or reject it with a reason and I'll redraft.`
+  }
+  if (hyp) {
+    return `Hypothesis v${hyp.version} is your draft. Accept it when it's ready to investigate.`
+  }
   if (savedId) {
-    return `Approach saved: ${names[savedId] ?? savedId}. I'll apply it on the hypothesis board, which isn't built yet.`
+    return `Approach saved: ${framework}. Next, I can draft a hypothesis at the bottom of the planning station.`
   }
   const rec = investigation.recommendation
   if (rec) {
@@ -76,6 +101,7 @@ function AgentPanel({
   availableCount,
   frameworkNames,
   recommending,
+  drafting,
   recent,
   onOpen,
   onNew,
@@ -85,7 +111,7 @@ function AgentPanel({
       <section className="card">
         <span className="eyebrow">Investigation loop</span>
         <ol className="loop">
-          {loopStates(investigation, recommending, frameworkNames).map(({ step, state, note }) => (
+          {loopStates(investigation, recommending, drafting, frameworkNames).map(({ step, state, note }) => (
             <li key={step} className={`loop-item ${state}`}>
               <span className="dot" aria-hidden="true" />
               <span className="loop-step">{step}</span>
@@ -97,7 +123,7 @@ function AgentPanel({
 
       <section className="card">
         <span className="eyebrow">Agent</span>
-        <p className="agent-message">{agentMessage(investigation, availableCount, recommending, frameworkNames)}</p>
+        <p className="agent-message">{agentMessage(investigation, availableCount, recommending, drafting, frameworkNames)}</p>
       </section>
 
       <section className="card">

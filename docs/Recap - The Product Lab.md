@@ -1,6 +1,6 @@
 # Recap: The Product Lab, so far
 
-*Last updated: November 13, 2026. Covers branch `feature/frontend`.*
+*Last updated: November 13, 2026 (after the hypothesis card). Covers branch `feature/frontend`.*
 
 ## Pitch (30 seconds)
 The Product Lab helps a product manager go from a vague question ("Several customers have requested an AI assistant. Should we build one?") to a decision brief backed by evidence. The PM writes down the problem and drops customer evidence into a "specimen tray". An AI agent then diagnoses the problem and recommends a thinking framework, citing the evidence it read. The PM approves each step and makes the final call. The agent never claims anything the evidence doesn't show.
@@ -9,10 +9,11 @@ The Product Lab helps a product manager go from a vague question ("Several custo
 | Station | What it does | Status |
 |---|---|---|
 | 1. Clipboard | Problem statement + specimen tray (evidence) | Built |
-| 2. Planning station | Pick a framework, or let the agent recommend one | Built (mode B still being QA-tested) |
-| 3. Hypothesis board | Form and edit hypotheses | Next |
-| 4. Investigation | Agent runs tools with PM approval | Not started |
-| 5. Results chamber | Decision brief + next experiment | Not started |
+| 2. Planning station | Pick a framework (or let the agent recommend one), then form the hypothesis | Built and QA'd |
+| 3. Investigation | Agent proposes tests, runs real tools with PM approval | Next |
+| 4. Results chamber | Decision brief + next experiment | Not started |
+
+The wireframe had a separate "Hypothesis board" station. I cut it for a more linear MVP: the hypothesis is now a card at the end of the Planning station.
 
 **Branches:** `main` has only the early skeleton. All current work is on `feature/frontend`, which will be merged into `main` through a pull request once QA is done.
 
@@ -79,6 +80,19 @@ Vite dev proxy ──► FastAPI backend (:8000) ──► Postgres on Supabase
   - Nobody knows whether customers would pay.
 - `scripts/seed_case_study.py` creates the investigation and adds the evidence **through the API**, so it gets the same validation and labels as a real upload. It's safe to re-run.
 
+### 9. The hypothesis card (`7404104`, `41ca546`, `c53095b`, + H4)
+**Why:** the investigation needs a target. "Should we build an AI assistant?" can't be tested; a hypothesis like *"customers asking for an AI assistant mostly need to explain why a metric changed"* can. The decision brief also has to show the hypothesis with supporting and contradicting evidence.
+
+**Product decision:** the wireframe had a full Hypothesis board (separate station, evidence columns, version history). I asked "does it still provide value if I cut it?" The answer: the *hypothesis* is essential, the *separate board* isn't. So I kept a card inside the Planning station, about half the work, and moved faster towards the investigation.
+
+- **H1: storage and API.** Migration 006 adds `hypothesis` (JSONB, the current one) and `rejected_hypotheses` (a JSONB list with my reasons) to `investigations`. Endpoints: write/edit, accept, reject (reason required). Versions count rejected ones too, so a redraft is "v2".
+- **H2: the agent drafts it.** One structured-output Claude call (`draft_hypothesis.py`) using the chosen framework, my answers, only the ticked evidence, and every rejected hypothesis **with my reason**. Guardrail: it can only cite evidence it was given. The first draft bundled three claims, so I tightened the prompt to "one claim, about 40 words" and the redraft responded to my rejection reason.
+- **Refactor:** the Claude call and its friendly error messages moved into one shared helper (`ask_structured`), used by both the recommendation and the hypothesis. I re-ran the recommendation afterwards to prove nothing changed.
+- **H3: the card.** Draft or write my own; edit; Accept (or "Save and accept" if edited); Reject and redraft (asks why); Based on labels; a fold-out of rejected versions; a warning if the framework changed since. The step bar went from 5 stations to 4.
+- **H4: honest status.** The side panel's loop shows Form hypothesis as Next / Drafting / Draft v2 / You accepted v2, worked out only from saved state.
+
+**Result on Tallyboard:** *"When a key metric moves, customers across many accounts (not just Northwind and Crestline) are trying to quickly explain why it changed, with traceable numbers, so they can answer leadership. 'AI assistant' requests are mostly a proxy for this job."* Based on INT-01, INT-03, INT-05, MET-01, MET-02, TKT-03.
+
 ## Concepts to be ready to explain
 | Term | One-liner |
 |---|---|
@@ -98,6 +112,10 @@ Vite dev proxy ──► FastAPI backend (:8000) ──► Postgres on Supabase
 | **Design tokens** | Colours and sizes stored once as CSS variables and reused everywhere |
 | **Seed data / idempotent** | Prepared sample data; a script that is safe to run many times |
 | **Branch / pull request** | A separate line of work; a PR is how it gets reviewed and merged into `main` |
+| **Falsifiable hypothesis** | A belief stated so evidence could prove it wrong; hence the "Would challenge it if…" box |
+| **Refactoring** | Restructuring code without changing what it does, then re-running the old feature to prove it |
+| **Deriving state from props** | The card resets its text boxes when a new version arrives from the backend |
+| **Status codes** | 200 worked, 400 makes no sense right now, 409 conflicts with what exists, 422 invalid data |
 
 ## Rebuild checklist (for a live demo)
 ```bash
@@ -111,14 +129,15 @@ npm create vite@latest frontend -- --template react-ts
 cd frontend && npm install && npm run dev      # http://localhost:5173
 # add the /api proxy to vite.config.ts
 
-# 3. Database (Supabase SQL editor): run migrations 001 → 005 in order
+# 3. Database (Supabase SQL editor): run migrations 001 → 006 in order
 # backend/.env:
 #   DATABASE_URL=<Supabase "Session pooler" URI, password with letters/numbers only>
 #   ANTHROPIC_API_KEY=<from console.anthropic.com>
 
 # 4. Build order
 # config.py → db/connection.py → schemas/ → db/investigations.py → api/investigations.py
-# → frameworks/*.yaml + loader → agent/recommend_framework.py → frontend stations
+# → frameworks/*.yaml + loader → agent/claude_client.py (ask_structured)
+# → agent/recommend_framework.py → agent/draft_hypothesis.py → frontend stations
 
 # 5. Demo data (backend running)
 cd backend && uv run python scripts/seed_case_study.py
@@ -128,6 +147,7 @@ cd backend && uv run python scripts/seed_case_study.py
 - **Password with an `@` broke the database URL.** The `@` was read as the end of the password. Fix: a password with only letters and numbers (or encode `@` as `%40`).
 - **"Site can't be reached".** The backend simply wasn't running. A local server only answers while its terminal process is running.
 - **Duplicate seed data.** My first loader trusted a uniqueness rule that, on the live database, only applies *within an investigation*. Rows with no investigation slipped through twice. Fix: delete the duplicates carefully (checked the count before committing), then load the data as a proper investigation through the API.
+- **Scope cut mid-build.** The wireframe had a separate Hypothesis board. I asked what would be lost by cutting it, kept the essential part (the hypothesis) and dropped the rest. That's an MVP trade-off, explained in terms of what the downstream stations need.
 - **Working from the wrong branch.** A fresh clone only showed `main`, while the real work was on `feature/frontend`. Lesson: check `git branch -a` before deciding where you are.
 
 ## Likely interview questions
@@ -135,4 +155,5 @@ cd backend && uv run python scripts/seed_case_study.py
 - **How do you stop the AI from making things up?** It only receives the evidence the PM ticked. It must answer in a fixed structure that separates evidence, interpretation, assumptions and gaps. The backend rejects citations to evidence it wasn't given. The UI only shows saved state.
 - **Why does the PM approve things?** The agent recommends and the PM decides. Every suggestion can be accepted, swapped or edited.
 - **Why a known-answer case study?** It lets me check whether the agent finds the contradictions and the gap, instead of just saying "yes, build it".
-- **What's next?** Finish QA of mode B on the Tallyboard data, then station 3 (the Hypothesis board) from its wireframe board, then the investigation tools, then the decision brief.
+- **Why does rejecting need a reason?** The agent reads it before redrafting, so each version gets better, and the history shows how the thinking changed.
+- **What's next?** The Investigation station: the agent identifies evidence gaps, proposes tests, asks for approval, runs real tools against the specimen tray, and reassesses the hypothesis. Then the decision brief.

@@ -38,6 +38,7 @@ function ClassicView() {
           availableCount={availableCount}
           frameworkNames={frameworkNames}
           recommending={lab.recommending}
+          drafting={lab.drafting}
           recent={lab.recent}
           onOpen={lab.open}
           onNew={lab.startNew}
