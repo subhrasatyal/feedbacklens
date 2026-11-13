@@ -9,7 +9,8 @@ from app.schemas.investigation import EvidenceCreate, InvestigationInput
 
 INVESTIGATION_COLUMNS = """
     id, question, requested_by, decision_deadline, what_would_change,
-    mode, framework_id, framework_inputs, recommendation, created_at, updated_at
+    mode, framework_id, framework_inputs, recommendation,
+    hypothesis, rejected_hypotheses, created_at, updated_at
 """
 
 EVIDENCE_COLUMNS = """
@@ -98,6 +99,33 @@ def save_recommendation(conn: Connection, investigation_id: UUID, recommendation
         "update investigations set recommendation = %s, updated_at = now() where id = %s",
         (Jsonb(recommendation), investigation_id),
     )
+
+
+def save_hypothesis(conn: Connection, investigation_id: UUID, hypothesis: dict) -> dict | None:
+    """Store the current hypothesis (replacing the previous current one)."""
+    return conn.execute(
+        f"""
+        update investigations set hypothesis = %s, updated_at = now()
+        where id = %s
+        returning {INVESTIGATION_COLUMNS}
+        """,
+        (Jsonb(hypothesis), investigation_id),
+    ).fetchone()
+
+
+def reject_hypothesis(conn: Connection, investigation_id: UUID, rejected: dict) -> dict | None:
+    """Add the rejected hypothesis to the end of the rejected list and clear the current one."""
+    return conn.execute(
+        f"""
+        update investigations
+        set rejected_hypotheses = rejected_hypotheses || %s,
+            hypothesis = null,
+            updated_at = now()
+        where id = %s
+        returning {INVESTIGATION_COLUMNS}
+        """,
+        (Jsonb([rejected]), investigation_id),
+    ).fetchone()
 
 
 def list_evidence(conn: Connection, investigation_id: UUID) -> list[dict]:

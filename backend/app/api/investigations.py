@@ -1,5 +1,6 @@
 """Endpoints for an investigation: its problem, specimen tray, approach and recommendation."""
 
+from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
@@ -19,6 +20,7 @@ from app.schemas.investigation import (
     InvestigationDetail,
     InvestigationInput,
 )
+from app.schemas.hypothesis import HypothesisEdit, RejectInput
 from app.schemas.planning import ApproachInput, Recommendation
 
 router = APIRouter(prefix="/api/investigations", tags=["investigations"])
@@ -105,6 +107,76 @@ def create_recommendation(investigation_id: UUID, conn: Connection = Depends(get
 
     db.save_recommendation(conn, investigation_id, recommendation.model_dump(mode="json"))
     return recommendation
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _next_version(investigation: dict) -> int:
+    """Versions count every hypothesis in the investigation, rejected ones included."""
+    versions = [h["version"] for h in investigation["rejected_hypotheses"]]
+    if investigation["hypothesis"]:
+        versions.append(investigation["hypothesis"]["version"])
+    return max(versions, default=0) + 1
+
+
+@router.put("/{investigation_id}/hypothesis", response_model=Investigation)
+def save_hypothesis(
+    investigation_id: UUID, data: HypothesisEdit, conn: Connection = Depends(get_conn)
+):
+    """Write a hypothesis or edit the current one. Any edit makes it a draft again."""
+    investigation = _get_or_404(conn, investigation_id)
+    current = investigation["hypothesis"]
+
+    if current is None:
+        # The PM is writing their own from scratch.
+        hypothesis = {
+            "based_on": [],
+            "rationale": None,
+            "framework_id": investigation["framework_id"],
+            "version": _next_version(investigation),
+            "created_at": _now(),
+        }
+    else:
+        hypothesis = dict(current)
+        unchanged = (
+            data.statement == current["statement"]
+            and data.challenge_if == current["challenge_if"]
+        )
+        if unchanged:
+            return investigation  # nothing to save
+
+    hypothesis.update(
+        statement=data.statement,
+        challenge_if=data.challenge_if,
+        status="draft",
+        written_by="pm",
+        updated_at=_now(),
+    )
+    return db.save_hypothesis(conn, investigation_id, hypothesis)
+
+
+@router.post("/{investigation_id}/hypothesis/accept", response_model=Investigation)
+def accept_hypothesis(investigation_id: UUID, conn: Connection = Depends(get_conn)):
+    """The PM signs off the current hypothesis as the one to investigate."""
+    investigation = _get_or_404(conn, investigation_id)
+    if investigation["hypothesis"] is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "There is no hypothesis to accept yet.")
+    hypothesis = {**investigation["hypothesis"], "status": "accepted", "updated_at": _now()}
+    return db.save_hypothesis(conn, investigation_id, hypothesis)
+
+
+@router.post("/{investigation_id}/hypothesis/reject", response_model=Investigation)
+def reject_hypothesis(
+    investigation_id: UUID, data: RejectInput, conn: Connection = Depends(get_conn)
+):
+    """Move the current hypothesis to the rejected list, with the PM's reason."""
+    investigation = _get_or_404(conn, investigation_id)
+    if investigation["hypothesis"] is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "There is no hypothesis to reject.")
+    rejected = {**investigation["hypothesis"], "reason": data.reason, "rejected_at": _now()}
+    return db.reject_hypothesis(conn, investigation_id, rejected)
 
 
 @router.post(
