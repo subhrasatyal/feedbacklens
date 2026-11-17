@@ -1,6 +1,6 @@
 # **The Product Lab**
 
-## **Product Requirements Document (v0.3)**
+## **Product Requirements Document (v0.4)**
 
 **Product type:** Agentic product management workspace  
 **Target audience:** Product managers at early-stage B2B SaaS companies  
@@ -90,20 +90,29 @@ For example:
 
 The hypothesis is treated as a proposition to investigate, not an established fact.
 
+In the MVP, the hypothesis is the last part of the experiment-planning station rather than a separate station (see the decision log).
+
 ### **Step 4: Investigate the evidence**
 
-The agent identifies what evidence would support or challenge the hypothesis, proposes an investigation, and asks for approval before taking meaningful actions.
+The agent tests the accepted hypothesis against the evidence, using the selected framework as its lens. The Planning step chose the framework; this step applies its procedure and expected outputs to the one claim in the hypothesis.
 
-With the supplied case data, it can search documents, compare customer statements, summarize patterns, and identify contradictions.
+In the MVP, this is one approved run:
+
+1. The station shows what the run will do (how many checked sources it will read and which framework procedure it will apply). Nothing runs until the PM clicks **Run investigation**; that click is the approval.  
+2. The agent reads every checked source and tests the hypothesis against them.  
+3. It returns a verdict (holds, partly holds, or doesn’t hold) with a confidence level and a short reason, plus findings with source references.  
+4. It proposes a next experiment with a success metric, which the PM can approve, edit, or reject with a reason (the agent then redrafts).
 
 The agent should distinguish between:
 
-* Evidence found in the supplied material.  
+* Evidence found in the supplied material (supporting or contradicting the hypothesis).  
 * Its interpretation of that evidence.  
 * Assumptions that remain unverified.  
 * Information that is missing.
 
-**Lab metaphor:** The investigation station becomes active as the agent runs approved experiments. Its activity reflects real tool calls and analysis, not fabricated progress.
+The PM can re-run the investigation, for example after changing which sources are checked.
+
+**Lab metaphor:** The investigation station becomes active when the PM approves the run. Its activity shows only what actually ran (sources read, procedure applied, time taken), not fabricated progress.
 
 ### **Step 5: Review the findings**
 
@@ -149,6 +158,8 @@ The agent follows an observable investigation loop:
 
 **Diagnose → Recommend → Form hypothesis → Identify evidence gaps → Propose investigation → Request approval → Execute tools → Reassess → Recommend next step**
 
+In the MVP, the station shows the proposed run, the PM approves it, and the steps from identifying evidence gaps to reassessing happen inside that one run. Recommending the next step is a separate proposal the PM approves, edits, or rejects.
+
 ### **Agent requirements**
 
 * Explain the rationale behind framework selection.  
@@ -191,11 +202,12 @@ The aesthetic should feel polished and intentional rather than childish. Avoid c
 
 **The investigation apparatus**
 
-* Visible agent steps and actual tool activity.  
-* Evidence being examined and questions still unanswered.  
-* Approval controls for proposed actions.
+* The hypothesis under test and a control to approve and run the investigation.  
+* Actual activity: sources read and procedure applied.  
+* Verdict with confidence, findings with source references, and questions still unanswered.  
+* Approval controls for the proposed next experiment.
 
-**The hypothesis board**
+**The hypothesis board** (cut for the MVP: the hypothesis is a card in the experiment-planning station, with previous versions in a fold-out)
 
 * Current and previous hypotheses.  
 * Supporting evidence, contradictory evidence, and open assumptions.  
@@ -225,8 +237,8 @@ The MVP will include:
 * Five curated frameworks.  
 * Editable hypotheses.  
 * One prepared case study with sample evidence.  
-* Document search and basic evidence analysis.  
-* One agent investigation loop with visible steps and approval controls.  
+* Evidence analysis over all checked sources (document search deferred; see the decision log).  
+* One agent investigation loop with visible steps and approval controls: an approved investigation run and an approvable next experiment.  
 * A decision brief with source-linked findings.  
 * A minimal interactive laboratory interface.  
 * A clear way to compare manual framework selection with agent-recommended selection.
@@ -297,7 +309,7 @@ The visual theme itself is not the primary success metric. The product must demo
 
 **Framework engine:** Curated framework definitions represented as structured data and reusable application procedures.
 
-**Tools:** Document search, basic evidence analysis, and experiment proposal generation.
+**Tools:** Evidence analysis and experiment proposal generation. Document search is deferred until the evidence set is too large for the agent to read in one call.
 
 **Investigation state:** Persist the current problem, framework, hypotheses, evidence references, approved actions, findings, and decision brief.
 
@@ -352,4 +364,9 @@ The hackathon MVP is complete when a PM can:
 7. Understand what the agent did, what it found, and what remains uncertain.
 
 The final demo should prove one central idea: **The Product Lab does not merely tell PMs which framework to use. It helps them use structured thinking and evidence to decide what to do next.**
+
+## **16\. Decision log**
+
+* **2026-11-13: Hypothesis board cut for the MVP.** The hypothesis becomes a card at the end of the experiment-planning station, so the flow has four stations: Clipboard, Planning (approach and hypothesis), Investigation, Results. Why: a more linear MVP; a separate station added a step without adding a decision.  
+* **2026-11-17: Investigation simplified to one approved run.** The agent applies the selected framework to all checked sources in one run, then proposes a next experiment the PM approves, edits, or rejects. Document search, multiple tests per round, and editing a test’s scope are deferred. Why: the Planning step has already reviewed the evidence, so a second search-and-compare layer would repeat it, and the case study is small enough to read in full. Trade-off: the demo shows less step-by-step agent activity; the approvable next experiment keeps a visible agent proposal and PM decision.
 
