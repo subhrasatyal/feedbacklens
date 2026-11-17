@@ -1,6 +1,6 @@
 # Recap: The Product Lab, so far
 
-*Last updated: November 17, 2026 (v1 complete end to end, after the decision brief). Covers branch `feature/frontend`.*
+*Last updated: November 17, 2026 (v1 complete end to end and deployed on Render). Covers branch `feature/frontend`.*
 
 ## Pitch (30 seconds)
 The Product Lab helps a product manager go from a vague question ("Several customers have requested an AI assistant. Should we build one?") to a decision brief backed by evidence. The PM writes down the problem and drops customer evidence into a "specimen tray". An AI agent then diagnoses the problem, recommends a thinking framework, drafts a testable hypothesis, and (once the PM approves) tests it against the evidence, returning a verdict, sourced findings and a next experiment. Finally it writes a decision brief that answers the original question, and the PM records the final call. The PM approves each step. The agent never claims anything the evidence doesn't show.
@@ -13,14 +13,14 @@ The Product Lab helps a product manager go from a vague question ("Several custo
 | 3. Investigation | One approved run tests the hypothesis; the PM approves the next experiment | Built and QA'd (changes planned after v1) |
 | 4. Results chamber | Decision brief: agent recommendation + PM's recorded decision | Built and QA'd |
 
-**v1 works end to end** (Nov 17): blank clipboard → evidence → framework → hypothesis → investigation → approved experiment → decision brief → PM decision. Next: my list of UX changes, then merge into `main`.
+**v1 works end to end** (Nov 17): blank clipboard → evidence → framework → hypothesis → investigation → approved experiment → decision brief → PM decision. **Deployed the same day** on Render's free tier, behind a shared password. Next: my list of UX changes.
 
 Two scope cuts, both recorded in the PRD's decision log (§16):
 - **Nov 13:** the separate "Hypothesis board" station became a card at the end of the Planning station.
 - **Nov 17:** the Investigation station became one approved run instead of a multi-test tool loop.
 - **Nov 17:** the decision brief deferred "Compare runs" (Run A vs Run B side by side), the lab/plain toggle and file export.
 
-**Branches:** `main` has only the early skeleton. All current work is on `feature/frontend`, which will be merged into `main` through a pull request once QA is done.
+**Branches:** `main` is what's live; Render redeploys it on every merge. Work happens on `feature/frontend` and reaches `main` through a pull request (#1 brought in v1, #2 the production setup).
 
 ## Architecture
 ```
@@ -130,6 +130,21 @@ Vite dev proxy ──► FastAPI backend (:8000) ──► Postgres on Supabase
 
 **PM QA (Nov 17, in the app):** generated the brief, tried to save "Decide differently" without a note (blocked), saved a decision, regenerated (decision cleared), saved again. All requests succeeded.
 
+### 12. Deploying it (`8ed3432`, PR #2, Nov 17)
+**Goal of the step:** a private, free, live web address for the demo.
+
+**Decisions and why:**
+- **One server, one address.** In production FastAPI serves the built React files *and* the API. The screens already call relative `/api/...` addresses, so no proxy, no CORS and one password prompt cover everything.
+- **A shared password (HTTP Basic Auth).** Any host gives the app a public URL, and every agent call spends my Anthropic credit, so a login was needed on Render *or* Railway. One shared password was 20 lines; real accounts can come later. Off on my laptop; `/api/health` stays open for Render.
+- **Free:** Render free web service + a second free Supabase project. The trade-offs: the app sleeps after ~15 minutes idle, and the database pauses after ~a week. Claude is the only cost, pay-per-call, capped by a monthly spend limit and a separate production API key.
+- **Docker, two stages:** Node builds the screens, a slim Python image runs the server with the exact locked packages. `.dockerignore` keeps `.env` out of the build.
+- **A separate production database** so test runs never mix with the demo, and the demo data loaded through the API (seed script with `SEED_URL`), so it gets the same checks and labels as a real upload.
+- **`main` deploys automatically**, and only changes through a reviewed pull request.
+
+**What went wrong (all fixed):** pasted SQL broke because the terminal wrapped long lines; I nearly ran it in the old project (Supabase labels every project "PRODUCTION"); the database password in Render was wrong, but I misread `/api/health` ("server up") as `/api/health/db` ("database works"). I also pasted a connection string with its password into chat, so I reset that password.
+
+**Result:** the live app passed a full Run A on the production URL: Tallyboard loaded, framework, hypothesis, investigation, experiment, brief and decision.
+
 ## Concepts to be ready to explain
 | Term | One-liner |
 |---|---|
@@ -161,6 +176,13 @@ Vite dev proxy ──► FastAPI backend (:8000) ──► Postgres on Supabase
 | **Verdict vs recommendation** | The verdict judges the hypothesis; the recommendation answers the original business question |
 | **Single source of truth** | The brief re-reads saved, approved data instead of copying it, so it can't disagree with the stations |
 | **Provenance** | Recording what an output was made from (run time, experiment version) so you can tell when it's out of date |
+| **Static files / build** | `npm run build` turns the React code into plain HTML, CSS and JS that any server can hand out |
+| **Docker / Dockerfile** | A recipe for the server's whole environment, so the host builds it the same way every time |
+| **HTTP Basic Auth** | The browser's built-in password box; the simplest way to keep a demo private |
+| **Health check** | The host asks one open address "are you up?"; a failed check keeps the old version live |
+| **Liveness vs readiness** | `/api/health` says the server runs; `/api/health/db` says it can also reach the database |
+| **Environment parity** | Production and laptop run the same code; only settings (env variables) differ |
+| **Cold start** | A free server that slept takes about a minute to answer the first request |
 
 ## Rebuild checklist (for a live demo)
 ```bash
@@ -188,6 +210,10 @@ cd frontend && npm install && npm run dev      # http://localhost:5173
 
 # 5. Demo data (backend running)
 cd backend && uv run python scripts/seed_case_study.py
+
+# 6. Deploy: new free Supabase project (run 001 → 008), Render Web Service from main
+#    (Docker, free, health check /api/health) with DATABASE_URL, ANTHROPIC_API_KEY,
+#    APP_PASSWORD; then seed it: SEED_URL=https://<app>.onrender.com SEED_PASSWORD=… 
 ```
 
 ## Problems we hit (good interview stories)
@@ -198,6 +224,8 @@ cd backend && uv run python scripts/seed_case_study.py
 - **Second scope cut, by questioning overlap.** The wireframe's Investigation had a multi-test tool loop. I noticed it repeated what the Planning step had already done with the same evidence, and cut it to one approved run plus an approvable experiment. I updated the wireframe, PRD and CLAUDE.md before writing code, so design, requirements and build stayed in sync.
 - **Long AI output.** Findings and experiments came back too long to scan. Fix: explicit length limits in the prompt, checked by re-running and counting words.
 - **Spotting that most of the brief already existed.** Instead of asking the AI to write a whole report (slow, and it could contradict what I approved), I assembled the brief from saved data and asked the AI for the one missing judgment.
+- **Deploy day: three passwords and a misleading "ok".** The database password, my Supabase login and the app's password are three different things, and I mixed them up. The app said "database ok" because I'd opened `/api/health`, which only proves the server is running. Lesson: know exactly what each check proves, and send error text, never connection strings.
+- **Copying code from a terminal broke it.** Long lines wrapped, so a comment spilled into the SQL. Fix: copy from a file or the clipboard, not the screen.
 - **Working from the wrong branch.** A fresh clone only showed `main`, while the real work was on `feature/frontend`. Lesson: check `git branch -a` before deciding where you are.
 
 ## Likely interview questions
@@ -210,4 +238,6 @@ cd backend && uv run python scripts/seed_case_study.py
 - **How do you know the activity log is true?** The backend records what it gave the agent and how long the call took. The agent never reports its own progress.
 - **Why doesn't the AI write the whole brief?** Everything except the recommendation was already approved by the PM. Re-generating it would be slower and could contradict what the PM signed off. So the brief reads saved data, and the AI writes only the recommendation, citing only labels the findings already cite.
 - **What if the PM disagrees with the agent?** They choose "Decide differently" and must say why. The brief records the PM's call next to the agent's recommendation.
-- **What's next?** UX changes from my own end-to-end testing, then merging `feature/frontend` into `main` and deploying on Render. Later: Compare runs, the lab theme and tests.
+- **How is it deployed?** One Docker container on Render's free tier: FastAPI serves the screens and the API from one address, behind a shared password. A separate free Supabase database. Every merge into `main` redeploys; the health check keeps the old version live if a deploy breaks.
+- **What does it cost to run?** Hosting and database are free. Claude is pay-per-call, with a monthly spend limit and a production-only API key I can revoke.
+- **What's next?** UX changes from my own end-to-end testing. Later: Compare runs, the lab theme, real user accounts and tests.
