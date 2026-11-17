@@ -7,7 +7,7 @@ export const STATIONS = [
   { id: 'clipboard', title: 'Clipboard', sub: 'Problem & evidence', built: true },
   { id: 'planning', title: 'Planning station', sub: 'Approach & hypothesis', built: true },
   { id: 'investigation', title: 'Investigation', sub: 'Test the hypothesis', built: true },
-  { id: 'results', title: 'Results chamber', sub: 'Decision brief', built: false },
+  { id: 'results', title: 'Results chamber', sub: 'Decision brief', built: true },
 ] as const
 
 export type StationId = (typeof STATIONS)[number]['id']

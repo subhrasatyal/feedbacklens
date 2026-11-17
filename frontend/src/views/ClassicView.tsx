@@ -3,6 +3,7 @@ import AppShell from '../components/shared/AppShell'
 import ClipboardStation from '../components/shared/ClipboardStation'
 import InvestigationStation from '../components/shared/InvestigationStation'
 import PlanningStation from '../components/shared/PlanningStation'
+import ResultsStation from '../components/shared/ResultsStation'
 import StationNav from '../components/shared/StationNav'
 import { STATIONS, type StationId } from '../components/shared/stations'
 import { useFrameworks } from '../hooks/useFrameworks'
@@ -21,22 +22,29 @@ function ClassicView() {
 
   // The investigation station also needs an accepted hypothesis to test.
   const canInvestigate = canPlan && investigation?.hypothesis?.status === 'accepted'
+  // The Results chamber needs an investigation run and an approved next experiment.
+  const canBrief =
+    canInvestigate &&
+    investigation?.investigation_run != null &&
+    investigation.next_experiment?.status === 'approved'
 
   function isOpenable(id: StationId): boolean {
     const station = STATIONS.find((s) => s.id === id)
     if (!station?.built) return false
     if (id === 'planning') return canPlan
     if (id === 'investigation') return canInvestigate
+    if (id === 'results') return canBrief
     return true
   }
 
   // Never show a station that can't be opened (e.g. after unchecking every source,
-  // or editing the hypothesis back to a draft): fall back to the nearest one that can.
-  const station: StationId = isOpenable(lab.station)
-    ? lab.station
-    : lab.station === 'investigation' && canPlan
-      ? 'planning'
-      : 'clipboard'
+  // or editing the hypothesis back to a draft): fall back to the nearest earlier one that can.
+  const order = STATIONS.map((s) => s.id)
+  const station: StationId =
+    order
+      .slice(0, order.indexOf(lab.station) + 1)
+      .reverse()
+      .find((id) => isOpenable(id)) ?? 'clipboard'
 
   return (
     <AppShell
@@ -51,6 +59,7 @@ function ClassicView() {
           drafting={lab.drafting}
           running={lab.running}
           redrafting={lab.redrafting}
+          writing={lab.writing}
           recent={lab.recent}
           onOpen={lab.open}
           onNew={lab.startNew}
@@ -84,6 +93,19 @@ function ClassicView() {
             onSaveExperiment={lab.saveExperiment}
             onApproveExperiment={lab.approveExperiment}
             onRejectExperiment={lab.rejectExperiment}
+            onContinue={() => lab.goToStation('results')}
+          />
+        )
+      ) : station === 'results' ? (
+        investigation && (
+          <ResultsStation
+            key={investigation.id}
+            investigation={investigation}
+            frameworkNames={frameworkNames}
+            writing={lab.writing}
+            onGenerate={lab.generateBrief}
+            onDecide={lab.saveDecision}
+            onGoTo={lab.goToStation}
           />
         )
       ) : (

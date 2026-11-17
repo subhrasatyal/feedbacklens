@@ -827,3 +827,90 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Station 4: Results chamber ---------- */
+
+.results-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* Three segments: low = 1, medium = 2, high = 3 filled. */
+.confidence-bar {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.confidence-bar span {
+  width: 40px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-border);
+}
+
+.confidence-bar span.on {
+  background: var(--color-accent);
+}
+
+.verdict-pill.small {
+  height: 30px;
+  padding: 0 14px;
+  font-size: 15px;
+}
+
+.fit-tag {
+  align-self: flex-start;
+}
+
+.evidence-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* The PM's final call, inside the recommendation card. */
+.decision-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border-light);
+}
+
+.decision-box p {
+  margin: 0;
+}
+
+.decision-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.decision-choices legend {
+  margin-bottom: 8px;
+}
+
+.sources-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.sources-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--color-border-light);
+  font-size: 14px;
+}

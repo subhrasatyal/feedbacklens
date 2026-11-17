@@ -9,6 +9,7 @@ type Props = {
   drafting: boolean // a hypothesis-draft request is running right now
   running: boolean // an investigation run is waiting for the agent right now
   redrafting: boolean // a next-experiment redraft is waiting right now
+  writing: boolean // a brief request is waiting right now
   recent: Investigation[]
   onOpen: (id: string) => void
   onNew: () => void
@@ -17,7 +18,7 @@ type Props = {
 type LoopState = { step: string; state: 'todo' | 'now' | 'done' | 'skipped'; note: string }
 
 // The live requests that are waiting for the agent right now.
-type Busy = { recommending: boolean; drafting: boolean; running: boolean; redrafting: boolean }
+type Busy = { recommending: boolean; drafting: boolean; running: boolean; redrafting: boolean; writing: boolean }
 
 // Where each loop step stands, worked out only from saved state and the live requests.
 // In the MVP, "Identify evidence gaps", "Execute tools" and "Reassess" all happen inside
@@ -84,7 +85,7 @@ function loopStates(
 function agentMessage(
   investigation: InvestigationDetail | null,
   availableCount: number,
-  { recommending, drafting, running, redrafting }: Busy,
+  { recommending, drafting, running, redrafting, writing }: Busy,
   names: Record<string, string>,
 ) {
   if (investigation === null) {
@@ -110,11 +111,22 @@ function agentMessage(
     return 'Drafting a new next experiment from my findings and your reasons…'
   }
   const run = investigation.investigation_run
+  if (writing) {
+    return 'Writing the recommendation from your approved hypothesis, my findings and the approved experiment…'
+  }
   if (run) {
     const verdict = `${VERDICT_NAMES[run.verdict]} (${run.confidence} confidence)`
     const experiment = investigation.next_experiment
+    const brief = investigation.decision_brief
+    const decision = investigation.pm_decision
+    if (experiment?.status === 'approved' && brief && decision) {
+      return `Brief written and you've made the call: ${decision.choice === 'follow' ? 'going with the recommendation' : 'deciding differently'}. Copy the brief to share it.`
+    }
+    if (experiment?.status === 'approved' && brief) {
+      return `I recommended: ${brief.recommendation} It's your call: record your decision on the brief.`
+    }
     if (experiment?.status === 'approved') {
-      return `Investigation finished: ${verdict}. You approved next experiment v${experiment.version}. The decision brief (station 4) isn't built yet.`
+      return `Investigation finished: ${verdict}. You approved next experiment v${experiment.version}. Next, generate the decision brief.`
     }
     if (experiment) {
       return `Investigation finished: ${verdict}. Review the next experiment: approve it, edit it, or reject it with a reason.`
@@ -151,11 +163,14 @@ function AgentPanel({
   drafting,
   running,
   redrafting,
+  writing,
   recent,
   onOpen,
   onNew,
 }: Props) {
-  const busy = { recommending, drafting, running, redrafting }
+  const busy = { recommending, drafting, running, redrafting, writing }
+  const run = investigation?.investigation_run ?? null
+  const experiment = investigation?.next_experiment ?? null
   // Missing information from the latest run: what the evidence couldn't answer.
   const missing = investigation?.investigation_run?.findings.filter((f) => f.kind === 'missing') ?? []
 
@@ -178,6 +193,30 @@ function AgentPanel({
         <span className="eyebrow">Agent</span>
         <p className="agent-message">{agentMessage(investigation, availableCount, busy, frameworkNames)}</p>
       </section>
+
+      {run && (
+        <section className="card">
+          <span className="eyebrow">What I did</span>
+          {/* Counts come from what the backend recorded, never from the agent's own report. */}
+          <ul className="activity-log">
+            <li>
+              1 approved run · {run.sources_read.length} source{run.sources_read.length === 1 ? '' : 's'} read ·{' '}
+              {run.duration_seconds} s
+            </li>
+            <li>
+              Hypothesis v{run.hypothesis_version} tested with {frameworkNames[run.framework_id] ?? run.framework_id}
+            </li>
+            {experiment && (
+              <li>
+                Next experiment v{experiment.version}
+                {investigation!.rejected_experiments.length > 0 &&
+                  ` (${investigation!.rejected_experiments.length} rejected by you)`}
+              </li>
+            )}
+            {investigation!.decision_brief && <li>Recommendation written from the findings, not new evidence</li>}
+          </ul>
+        </section>
+      )}
 
       {missing.length > 0 && (
         <section className="card">

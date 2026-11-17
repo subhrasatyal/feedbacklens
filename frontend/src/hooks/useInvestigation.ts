@@ -4,6 +4,7 @@ import {
   addEvidence as addEvidenceRequest,
   approveExperiment as approveExperimentRequest,
   createInvestigation,
+  generateBrief as generateBriefRequest,
   deleteEvidence,
   draftExperiment as draftExperimentRequest,
   draftHypothesis as draftHypothesisRequest,
@@ -14,11 +15,13 @@ import {
   requestRecommendation as requestRecommendationRequest,
   runInvestigation as runInvestigationRequest,
   saveApproach as saveApproachRequest,
+  saveDecision as saveDecisionRequest,
   saveExperiment as saveExperimentRequest,
   saveHypothesis as saveHypothesisRequest,
   setEvidenceUse as setEvidenceUseRequest,
   updateInvestigation,
   type ApproachInput,
+  type DecisionInput,
   type EvidenceCreate,
   type ExperimentEdit,
   type HypothesisEdit,
@@ -63,6 +66,8 @@ export function useInvestigation() {
   const [running, setRunning] = useState(false)
   // True only while a real next-experiment redraft is waiting for the agent.
   const [redrafting, setRedrafting] = useState(false)
+  // True only while a real brief request is waiting for the agent.
+  const [writing, setWriting] = useState(false)
 
   // Fetch one investigation. State only changes once the reply arrives.
   const load = useCallback((id: string) => {
@@ -230,6 +235,23 @@ export function useInvestigation() {
     applyUpdate(investigation.id, await rejectExperimentRequest(investigation.id, reason))
   }
 
+  // Results chamber actions. Errors go back to the caller, which shows them on the card.
+  async function generateBrief() {
+    if (investigation === null) return
+    const id = investigation.id
+    setWriting(true)
+    try {
+      applyUpdate(id, await generateBriefRequest(id))
+    } finally {
+      setWriting(false)
+    }
+  }
+
+  async function saveDecision(input: DecisionInput) {
+    if (investigation === null) return
+    applyUpdate(investigation.id, await saveDecisionRequest(investigation.id, input))
+  }
+
   // Add evidence to the open investigation's specimen tray. Errors go back to the caller.
   async function addEvidence(items: EvidenceCreate[]) {
     if (investigation === null) return
@@ -271,6 +293,7 @@ export function useInvestigation() {
     drafting,
     running,
     redrafting,
+    writing,
     goToStation,
     open,
     startNew,
@@ -286,6 +309,8 @@ export function useInvestigation() {
     saveExperiment,
     approveExperiment,
     rejectExperiment,
+    generateBrief,
+    saveDecision,
     addEvidence,
     setEvidenceUse,
     removeEvidence,

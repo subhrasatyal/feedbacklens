@@ -18,6 +18,7 @@ type Props = {
   onSaveExperiment: (input: ExperimentEdit) => Promise<void>
   onApproveExperiment: () => Promise<void>
   onRejectExperiment: (reason: string) => Promise<void>
+  onContinue: () => void // go to the Results chamber
 }
 
 // The five kinds of finding, in the order they're shown. Evidence (supports, contradicts)
@@ -41,6 +42,7 @@ function InvestigationStation({
   onSaveExperiment,
   onApproveExperiment,
   onRejectExperiment,
+  onContinue,
 }: Props) {
   const [error, setError] = useState<string | null>(null)
   const hypothesis = investigation.hypothesis
@@ -197,6 +199,7 @@ function InvestigationStation({
             onSave={onSaveExperiment}
             onApprove={onApproveExperiment}
             onReject={onRejectExperiment}
+            onContinue={onContinue}
           />
         </>
       )}
@@ -231,7 +234,8 @@ function FindingGroup({ title, none, findings }: { title: string; none: string; 
   )
 }
 
-function Refs({ refs }: { refs: string[] }) {
+// Citation labels (e.g. INT-01) as small tags. Also used by the Results chamber.
+export function Refs({ refs }: { refs: string[] }) {
   if (refs.length === 0) return null
   return (
     <div className="row ref-row">

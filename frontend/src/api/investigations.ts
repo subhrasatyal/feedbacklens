@@ -103,6 +103,30 @@ export type NextExperiment = ExperimentEdit & {
 
 export type RejectedExperiment = NextExperiment & { reason: string; rejected_at: string }
 
+// The Results chamber. Mirrors backend/app/schemas/brief.py.
+// The agent's recommendation; the rest of the brief is read from saved state.
+export type DecisionBrief = {
+  recommendation: string // what to do about the original question
+  reasoning: string
+  evidence_refs: string[]
+  confidence: 'low' | 'medium' | 'high'
+  confidence_reason: string
+  what_would_change: string
+  model: string
+  generated_at: string
+  // What it was written from, to spot an out-of-date brief.
+  run_ran_at: string
+  experiment_version: number
+  experiment_updated_at: string
+}
+
+export type DecisionChoice = 'follow' | 'differ' // go with the recommendation / decide differently
+
+// The PM's final call. A note is required when deciding differently.
+export type DecisionInput = { choice: DecisionChoice; note: string | null }
+
+export type PmDecision = DecisionInput & { decided_at: string }
+
 export type Investigation = InvestigationInput & {
   id: string
   // Empty until an approach is saved at the Planning station.
@@ -116,6 +140,9 @@ export type Investigation = InvestigationInput & {
   investigation_run: InvestigationRun | null
   next_experiment: NextExperiment | null
   rejected_experiments: RejectedExperiment[] // oldest first
+  // Results chamber: empty until the PM generates the brief / records a decision.
+  decision_brief: DecisionBrief | null
+  pm_decision: PmDecision | null // cleared whenever the brief is regenerated
   created_at: string
   updated_at: string
 }
@@ -278,6 +305,25 @@ export async function rejectExperiment(id: string, reason: string): Promise<Inve
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ reason }),
+  })
+  await throwIfFailed(response)
+  return response.json()
+}
+
+// The PM's Generate brief click: the agent writes the recommendation from the saved
+// hypothesis, findings and approved experiment. About 15 seconds. Clears the PM's decision.
+export async function generateBrief(id: string): Promise<Investigation> {
+  const response = await fetch(`/api/investigations/${id}/brief`, { method: 'POST' })
+  await throwIfFailed(response)
+  return response.json()
+}
+
+// The PM's final call on the current recommendation.
+export async function saveDecision(id: string, input: DecisionInput): Promise<Investigation> {
+  const response = await fetch(`/api/investigations/${id}/decision`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
   })
   await throwIfFailed(response)
   return response.json()

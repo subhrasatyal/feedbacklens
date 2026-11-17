@@ -9,6 +9,7 @@ type Props = {
   onSave: (input: ExperimentEdit) => Promise<void>
   onApprove: () => Promise<void>
   onReject: (reason: string) => Promise<void>
+  onContinue: () => void // go to the Results chamber
 }
 
 const EMPTY: ExperimentEdit = { title: '', experiment: '', why: '', success_metric: '' }
@@ -28,7 +29,16 @@ function editableParts(experiment: NextExperiment | null): ExperimentEdit {
 
 // The end of the Investigation station: the agent proposes one next experiment from its findings.
 // The PM approves it, edits it, or rejects it with a reason (and the agent redrafts).
-function ExperimentCard({ investigation, redrafting, disabled, onDraft, onSave, onApprove, onReject }: Props) {
+function ExperimentCard({
+  investigation,
+  redrafting,
+  disabled,
+  onDraft,
+  onSave,
+  onApprove,
+  onReject,
+  onContinue,
+}: Props) {
   const current = investigation.next_experiment
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<ExperimentEdit>(EMPTY)
@@ -160,10 +170,9 @@ function ExperimentCard({ investigation, redrafting, disabled, onDraft, onSave, 
           )}
           {current.status === 'approved' && (
             <div className="row">
-              <button type="button" className="btn pri" disabled>
+              <button type="button" className="btn pri" disabled={working} onClick={onContinue}>
                 Next: decision brief
               </button>
-              <span className="muted">The Results chamber (station 4) isn't built yet.</span>
             </div>
           )}
         </>
