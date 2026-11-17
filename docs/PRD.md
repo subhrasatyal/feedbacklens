@@ -126,7 +126,11 @@ The agent produces a decision brief that includes:
 * Recommendation and confidence level.  
 * Proposed next experiment and success metric.
 
-The PM can challenge the interpretation, revise the hypothesis, or ask the agent to investigate another question.
+In the MVP, the brief opens once the PM has approved the next experiment. Everything except the recommendation is assembled from what the PM has already approved: the problem, the framework and its rationale, the accepted hypothesis with its verdict, the investigation’s findings (supporting, contradicting, interpretation, assumptions and gaps), and the approved experiment. A list of the sources cited makes every label traceable to a piece of supplied evidence.
+
+The recommendation is the one new piece. The investigation’s verdict says whether the hypothesis holds; the recommendation answers the original question (what should we do?). When the PM clicks **Generate brief**, the agent writes it from the saved hypothesis, findings and experiment, without re-reading the evidence: a headline recommendation, a short reason with source references, a confidence level with its reason, and what would change the recommendation. It may only cite labels the findings already cite.
+
+The PM records the final call: go with the recommendation, or decide differently, with a note. The brief warns when the investigation or experiment changed after it was written. The PM can go back to revise the hypothesis or re-run the investigation, and can copy the brief as plain text.
 
 **Lab metaphor:** Findings are assembled on the results board for the PM to review.
 
@@ -215,9 +219,9 @@ The aesthetic should feel polished and intentional rather than childish. Avoid c
 
 **The results chamber**
 
-* Final decision brief.  
+* Final decision brief, with the agent’s recommendation and the PM’s recorded decision.  
 * Recommended next experiment.  
-* Evidence traceability and remaining uncertainty.
+* Evidence traceability (sources cited) and remaining uncertainty.
 
   ### **Interaction principles**
 
@@ -241,7 +245,7 @@ The MVP will include:
 * One agent investigation loop with visible steps and approval controls: an approved investigation run and an approvable next experiment.  
 * A decision brief with source-linked findings.  
 * A minimal interactive laboratory interface.  
-* A clear way to compare manual framework selection with agent-recommended selection.
+* A clear way to compare manual framework selection with agent-recommended selection (deferred after v1: compare by opening the two briefs; see the decision log).
 
   ### **Explicitly out of scope**
 
@@ -368,5 +372,6 @@ The final demo should prove one central idea: **The Product Lab does not merely 
 ## **16\. Decision log**
 
 * **2026-11-13: Hypothesis board cut for the MVP.** The hypothesis becomes a card at the end of the experiment-planning station, so the flow has four stations: Clipboard, Planning (approach and hypothesis), Investigation, Results. Why: a more linear MVP; a separate station added a step without adding a decision.  
-* **2026-11-17: Investigation simplified to one approved run.** The agent applies the selected framework to all checked sources in one run, then proposes a next experiment the PM approves, edits, or rejects. Document search, multiple tests per round, and editing a test’s scope are deferred. Why: the Planning step has already reviewed the evidence, so a second search-and-compare layer would repeat it, and the case study is small enough to read in full. Trade-off: the demo shows less step-by-step agent activity; the approvable next experiment keeps a visible agent proposal and PM decision.
+* **2026-11-17: Investigation simplified to one approved run.** The agent applies the selected framework to all checked sources in one run, then proposes a next experiment the PM approves, edits, or rejects. Document search, multiple tests per round, and editing a test’s scope are deferred. Why: the Planning step has already reviewed the evidence, so a second search-and-compare layer would repeat it, and the case study is small enough to read in full. Trade-off: the demo shows less step-by-step agent activity; the approvable next experiment keeps a visible agent proposal and PM decision.  
+* **2026-11-17: Decision brief scoped for v1.** The brief is assembled from saved, PM-approved state; only the recommendation is new, written by one agent call that reads the findings rather than the raw evidence. The PM records the final decision with a note. Deferred: the side-by-side “Compare runs” table (it needs two linked investigations; for the demo, open the two briefs in turn), the lab/plain view toggle (no lab theme yet) and file export (copy as text instead). Why: finish a working end-to-end v1 first.
 
