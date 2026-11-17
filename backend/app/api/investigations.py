@@ -10,6 +10,7 @@ from psycopg import Connection
 from app.agent.claude_client import AgentError, AgentNotConfigured
 from app.agent.draft_hypothesis import draft_hypothesis
 from app.agent.recommend_framework import recommend_framework
+from app.agent.redraft_experiment import redraft_experiment
 from app.agent.run_investigation import run_investigation
 from app.db import investigations as db
 from app.db.connection import get_conn
@@ -23,6 +24,7 @@ from app.schemas.investigation import (
     InvestigationInput,
 )
 from app.schemas.hypothesis import HypothesisEdit, RejectInput
+from app.schemas.investigation_run import ExperimentEdit
 from app.schemas.planning import ApproachInput, Recommendation
 
 router = APIRouter(prefix="/api/investigations", tags=["investigations"])
@@ -270,6 +272,88 @@ def run_investigation_endpoint(investigation_id: UUID, conn: Connection = Depend
         "updated_at": _now(),
     }
     return db.save_investigation_run(conn, investigation_id, run, next_experiment)
+
+
+def _get_run_or_400(conn: Connection, investigation_id: UUID) -> dict:
+    """The investigation, which must have been run: the next experiment comes from its findings."""
+    investigation = _get_or_404(conn, investigation_id)
+    if investigation["investigation_run"] is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Run the investigation first.")
+    return investigation
+
+
+@router.post("/{investigation_id}/next-experiment/draft", response_model=Investigation)
+def create_experiment_draft(investigation_id: UUID, conn: Connection = Depends(get_conn)):
+    """The agent proposes a new next experiment after the PM rejected one. Takes about 10-20 seconds."""
+    investigation = _get_run_or_400(conn, investigation_id)
+    if investigation["next_experiment"] is not None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "There is already a next experiment. Reject it (with a reason) to get a new one.",
+        )
+    if not investigation["rejected_experiments"]:
+        # The first proposal comes from the run itself; a redraft answers a rejection.
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Run the investigation to get a first proposal.")
+
+    try:
+        draft = redraft_experiment(investigation)
+    except AgentNotConfigured as error:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(error)) from error
+    except AgentError as error:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(error)) from error
+
+    experiment = {
+        **draft.model_dump(mode="json"),
+        "status": "proposed",
+        "written_by": "agent",
+        "version": _next_experiment_version(investigation),
+        "created_at": _now(),
+        "updated_at": _now(),
+    }
+    return db.save_next_experiment(conn, investigation_id, experiment)
+
+
+@router.put("/{investigation_id}/next-experiment", response_model=Investigation)
+def save_next_experiment(
+    investigation_id: UUID, data: ExperimentEdit, conn: Connection = Depends(get_conn)
+):
+    """Write a next experiment or edit the current one. Any edit makes it a proposal again."""
+    investigation = _get_run_or_400(conn, investigation_id)
+    current = investigation["next_experiment"]
+    edited = data.model_dump()
+
+    if current is None:
+        # The PM is writing their own after rejecting the agent's.
+        experiment = {"version": _next_experiment_version(investigation), "created_at": _now()}
+    else:
+        if all(current[field] == value for field, value in edited.items()):
+            return investigation  # nothing to save
+        experiment = dict(current)
+
+    experiment.update(edited, status="proposed", written_by="pm", updated_at=_now())
+    return db.save_next_experiment(conn, investigation_id, experiment)
+
+
+@router.post("/{investigation_id}/next-experiment/approve", response_model=Investigation)
+def approve_next_experiment(investigation_id: UUID, conn: Connection = Depends(get_conn)):
+    """The PM approves the next experiment. It goes into the decision brief."""
+    investigation = _get_or_404(conn, investigation_id)
+    if investigation["next_experiment"] is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "There is no next experiment to approve.")
+    experiment = {**investigation["next_experiment"], "status": "approved", "updated_at": _now()}
+    return db.save_next_experiment(conn, investigation_id, experiment)
+
+
+@router.post("/{investigation_id}/next-experiment/reject", response_model=Investigation)
+def reject_next_experiment(
+    investigation_id: UUID, data: RejectInput, conn: Connection = Depends(get_conn)
+):
+    """Move the current next experiment to the rejected list, with the PM's reason."""
+    investigation = _get_or_404(conn, investigation_id)
+    if investigation["next_experiment"] is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "There is no next experiment to reject.")
+    rejected = {**investigation["next_experiment"], "reason": data.reason, "rejected_at": _now()}
+    return db.reject_next_experiment(conn, investigation_id, rejected)
 
 
 @router.post(

@@ -60,6 +60,8 @@ missing information or riskiest assumption you found. A small team should be
 able to run it in about two weeks with the customers they have. success_metric
 must be measurable and include a threshold (for example "3 of 5 interviewees
 describe it unprompted"). why: one sentence linking it to your findings.
+Keep it short enough to scan on a card: experiment at most 3 plain sentences
+(about 60 words); success_metric one sentence with one clear threshold.
 
 Only use evidence labels that appear in the evidence. Never claim you searched,
 measured, interviewed or verified anything: you only read what is provided.

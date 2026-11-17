@@ -145,6 +145,33 @@ def save_investigation_run(
     ).fetchone()
 
 
+def save_next_experiment(conn: Connection, investigation_id: UUID, experiment: dict) -> dict | None:
+    """Store the current next experiment (replacing the previous current one)."""
+    return conn.execute(
+        f"""
+        update investigations set next_experiment = %s, updated_at = now()
+        where id = %s
+        returning {INVESTIGATION_COLUMNS}
+        """,
+        (Jsonb(experiment), investigation_id),
+    ).fetchone()
+
+
+def reject_next_experiment(conn: Connection, investigation_id: UUID, rejected: dict) -> dict | None:
+    """Add the rejected experiment to the end of the rejected list and clear the current one."""
+    return conn.execute(
+        f"""
+        update investigations
+        set rejected_experiments = rejected_experiments || %s,
+            next_experiment = null,
+            updated_at = now()
+        where id = %s
+        returning {INVESTIGATION_COLUMNS}
+        """,
+        (Jsonb([rejected]), investigation_id),
+    ).fetchone()
+
+
 def list_evidence(conn: Connection, investigation_id: UUID) -> list[dict]:
     """An investigation's evidence, in the order it was added."""
     return conn.execute(

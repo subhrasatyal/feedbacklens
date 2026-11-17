@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.hypothesis import Author
 from app.schemas.planning import Confidence
@@ -75,3 +75,14 @@ class RejectedExperiment(NextExperiment):
 
     reason: str
     rejected_at: datetime
+
+
+class ExperimentEdit(BaseModel):
+    """What the PM sends to write or edit the next experiment."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    title: str = Field(min_length=1)
+    experiment: str = Field(min_length=1)
+    why: str = Field(min_length=1)
+    success_metric: str = Field(min_length=1)
