@@ -12,6 +12,7 @@ INVESTIGATION_COLUMNS = """
     mode, framework_id, framework_inputs, recommendation,
     hypothesis, rejected_hypotheses,
     investigation_run, next_experiment, rejected_experiments,
+    decision_brief, pm_decision,
     created_at, updated_at
 """
 
@@ -169,6 +170,31 @@ def reject_next_experiment(conn: Connection, investigation_id: UUID, rejected: d
         returning {INVESTIGATION_COLUMNS}
         """,
         (Jsonb([rejected]), investigation_id),
+    ).fetchone()
+
+
+def save_brief(conn: Connection, investigation_id: UUID, brief: dict) -> dict | None:
+    """Store a new recommendation and clear the PM's decision, which answered the old one."""
+    return conn.execute(
+        f"""
+        update investigations
+        set decision_brief = %s, pm_decision = null, updated_at = now()
+        where id = %s
+        returning {INVESTIGATION_COLUMNS}
+        """,
+        (Jsonb(brief), investigation_id),
+    ).fetchone()
+
+
+def save_decision(conn: Connection, investigation_id: UUID, decision: dict) -> dict | None:
+    """Store the PM's final call on the current recommendation."""
+    return conn.execute(
+        f"""
+        update investigations set pm_decision = %s, updated_at = now()
+        where id = %s
+        returning {INVESTIGATION_COLUMNS}
+        """,
+        (Jsonb(decision), investigation_id),
     ).fetchone()
 
 

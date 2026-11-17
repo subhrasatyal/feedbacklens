@@ -6,6 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.schemas.brief import DecisionBrief, PmDecision
 from app.schemas.hypothesis import Hypothesis, RejectedHypothesis
 from app.schemas.investigation_run import InvestigationRun, NextExperiment, RejectedExperiment
 from app.schemas.planning import Mode, Recommendation
@@ -50,6 +51,9 @@ class Investigation(InvestigationInput):
     investigation_run: InvestigationRun | None
     next_experiment: NextExperiment | None
     rejected_experiments: list[RejectedExperiment]
+    # Results chamber: empty until the PM generates the brief / records a decision.
+    decision_brief: DecisionBrief | None
+    pm_decision: PmDecision | None
     created_at: datetime
     updated_at: datetime
 

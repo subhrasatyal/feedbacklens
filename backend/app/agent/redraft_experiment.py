@@ -37,7 +37,7 @@ Never claim you searched, measured, interviewed or verified anything.
 """
 
 
-def _run_text(run: dict) -> str:
+def run_text(run: dict) -> str:
     lines = [
         f"Verdict: {run['verdict']} (confidence {run['confidence']})",
         f"Reason: {run['verdict_reason']}",
@@ -63,7 +63,7 @@ def redraft_experiment(investigation: dict) -> ExperimentDraft:
     prompt = (
         f"<problem>\n{problem_text(investigation)}\n</problem>\n\n"
         f"<hypothesis>\n{hypothesis['statement']}\n</hypothesis>\n\n"
-        f"<investigation>\n{_run_text(investigation['investigation_run'])}\n</investigation>\n\n"
+        f"<investigation>\n{run_text(investigation['investigation_run'])}\n</investigation>\n\n"
         f"<rejected_experiments>\n{_rejected_text(investigation['rejected_experiments'])}\n</rejected_experiments>\n\n"
         "Propose one new next experiment."
     )

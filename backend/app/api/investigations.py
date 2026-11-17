@@ -1,4 +1,4 @@
-"""Endpoints for an investigation: its problem, specimen tray, approach, hypothesis and investigation run."""
+"""Endpoints for an investigation: its problem, specimen tray, approach, hypothesis, investigation run and decision brief."""
 
 from datetime import datetime, timezone
 from typing import Annotated
@@ -12,6 +12,7 @@ from app.agent.draft_hypothesis import draft_hypothesis
 from app.agent.recommend_framework import recommend_framework
 from app.agent.redraft_experiment import redraft_experiment
 from app.agent.run_investigation import run_investigation
+from app.agent.write_brief import write_brief
 from app.db import investigations as db
 from app.db.connection import get_conn
 from app.frameworks import FRAMEWORKS, PM_QUESTIONS, missing_required_answers
@@ -23,6 +24,7 @@ from app.schemas.investigation import (
     InvestigationDetail,
     InvestigationInput,
 )
+from app.schemas.brief import DecisionInput
 from app.schemas.hypothesis import HypothesisEdit, RejectInput
 from app.schemas.investigation_run import ExperimentEdit
 from app.schemas.planning import ApproachInput, Recommendation
@@ -354,6 +356,48 @@ def reject_next_experiment(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "There is no next experiment to reject.")
     rejected = {**investigation["next_experiment"], "reason": data.reason, "rejected_at": _now()}
     return db.reject_next_experiment(conn, investigation_id, rejected)
+
+
+@router.post("/{investigation_id}/brief", response_model=Investigation)
+def create_brief(investigation_id: UUID, conn: Connection = Depends(get_conn)):
+    """The PM's Generate brief click: the agent writes the recommendation from the saved
+    hypothesis, findings and approved experiment. Takes about 10-20 seconds.
+    Regenerating replaces the recommendation and clears the PM's decision on the old one."""
+    investigation = _get_run_or_400(conn, investigation_id)
+    experiment = investigation["next_experiment"]
+    if experiment is None or experiment["status"] != "approved":
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Approve a next experiment in the Investigation station first."
+        )
+
+    try:
+        draft, model = write_brief(investigation)
+    except AgentNotConfigured as error:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(error)) from error
+    except AgentError as error:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(error)) from error
+
+    brief = {
+        **draft.model_dump(mode="json"),
+        "model": model,
+        "generated_at": _now(),
+        "run_ran_at": investigation["investigation_run"]["ran_at"],
+        "experiment_version": experiment["version"],
+        "experiment_updated_at": experiment["updated_at"],
+    }
+    return db.save_brief(conn, investigation_id, brief)
+
+
+@router.put("/{investigation_id}/decision", response_model=Investigation)
+def save_decision(
+    investigation_id: UUID, data: DecisionInput, conn: Connection = Depends(get_conn)
+):
+    """The PM's final call on the current recommendation: follow it, or decide differently (with a note)."""
+    investigation = _get_or_404(conn, investigation_id)
+    if investigation["decision_brief"] is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Generate the brief before recording a decision.")
+    decision = {"choice": data.choice, "note": data.note, "decided_at": _now()}
+    return db.save_decision(conn, investigation_id, decision)
 
 
 @router.post(
