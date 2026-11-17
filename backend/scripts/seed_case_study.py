@@ -7,14 +7,25 @@ if the investigation already exists, nothing is added.
 
 Usage (with the backend running on :8000):
     cd backend && uv run python scripts/seed_case_study.py
+
+Production (the live app, protected by its shared password):
+    cd backend && SEED_URL=https://your-app.onrender.com SEED_PASSWORD=... uv run python scripts/seed_case_study.py
 """
 
+import base64
 import json
+import os
 import urllib.error
 import urllib.request
 from pathlib import Path
 
-API_URL = "http://localhost:8000/api/investigations"
+# Where the app runs: your laptop by default, or the live app's address.
+APP_URL = os.getenv("SEED_URL", "http://localhost:8000").rstrip("/")
+API_URL = f"{APP_URL}/api/investigations"
+# The live app's shared password (not needed on your laptop).
+PASSWORD = os.getenv("SEED_PASSWORD")
+# Where to open the result: the Vite dev server locally, the same address in production.
+OPEN_URL = "http://localhost:5173" if "SEED_URL" not in os.environ else APP_URL
 CASE_STUDY_DIR = Path(__file__).parent.parent / "data" / "case_study"
 
 INVESTIGATION = {
@@ -28,12 +39,20 @@ INVESTIGATION = {
 }
 
 
+def _headers():
+    headers = {"Content-Type": "application/json"}
+    if PASSWORD:
+        token = base64.b64encode(f"seed:{PASSWORD}".encode()).decode()
+        headers["Authorization"] = f"Basic {token}"
+    return headers
+
+
 def call_api(method, url, body=None):
     """Send a request to the backend and return the JSON answer."""
     request = urllib.request.Request(
         url,
         data=json.dumps(body).encode() if body is not None else None,
-        headers={"Content-Type": "application/json"},
+        headers=_headers(),
         method=method,
     )
     with urllib.request.urlopen(request) as response:
@@ -77,7 +96,7 @@ def main():
     for investigation in call_api("GET", API_URL):
         if investigation["question"] == INVESTIGATION["question"]:
             print("The Tallyboard investigation is already loaded. Nothing added.")
-            print(f"Open it: http://localhost:5173/?id={investigation['id']}")
+            print(f"Open it: {OPEN_URL}/?id={investigation['id']}")
             return
 
     investigation = call_api("POST", API_URL, INVESTIGATION)
@@ -100,7 +119,7 @@ def main():
         print(f"added  {item['source_label']}: {item['title']}{note}")
 
     print(f"\nDone: {len(saved)} pieces of evidence added.")
-    print(f"Open it: http://localhost:5173/?id={investigation['id']}")
+    print(f"Open it: {OPEN_URL}/?id={investigation['id']}")
 
 
 if __name__ == "__main__":
