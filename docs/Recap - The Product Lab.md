@@ -1,19 +1,21 @@
 # Recap: The Product Lab, so far
 
-*Last updated: November 13, 2026 (after the hypothesis card). Covers branch `feature/frontend`.*
+*Last updated: November 17, 2026 (after the Investigation station). Covers branch `feature/frontend`.*
 
 ## Pitch (30 seconds)
-The Product Lab helps a product manager go from a vague question ("Several customers have requested an AI assistant. Should we build one?") to a decision brief backed by evidence. The PM writes down the problem and drops customer evidence into a "specimen tray". An AI agent then diagnoses the problem and recommends a thinking framework, citing the evidence it read. The PM approves each step and makes the final call. The agent never claims anything the evidence doesn't show.
+The Product Lab helps a product manager go from a vague question ("Several customers have requested an AI assistant. Should we build one?") to a decision brief backed by evidence. The PM writes down the problem and drops customer evidence into a "specimen tray". An AI agent then diagnoses the problem, recommends a thinking framework, drafts a testable hypothesis, and (once the PM approves) tests it against the evidence, returning a verdict, sourced findings and a next experiment. The PM approves each step and makes the final call. The agent never claims anything the evidence doesn't show.
 
 ## Where things stand
 | Station | What it does | Status |
 |---|---|---|
 | 1. Clipboard | Problem statement + specimen tray (evidence) | Built |
 | 2. Planning station | Pick a framework (or let the agent recommend one), then form the hypothesis | Built and QA'd |
-| 3. Investigation | Agent proposes tests, runs real tools with PM approval | Next |
-| 4. Results chamber | Decision brief + next experiment | Not started |
+| 3. Investigation | One approved run tests the hypothesis; the PM approves the next experiment | Built and QA'd (changes planned after v1) |
+| 4. Results chamber | Decision brief | Next |
 
-The wireframe had a separate "Hypothesis board" station. I cut it for a more linear MVP: the hypothesis is now a card at the end of the Planning station.
+Two scope cuts, both recorded in the PRD's decision log (§16):
+- **Nov 13:** the separate "Hypothesis board" station became a card at the end of the Planning station.
+- **Nov 17:** the Investigation station became one approved run instead of a multi-test tool loop.
 
 **Branches:** `main` has only the early skeleton. All current work is on `feature/frontend`, which will be merged into `main` through a pull request once QA is done.
 
@@ -93,6 +95,24 @@ Vite dev proxy ──► FastAPI backend (:8000) ──► Postgres on Supabase
 
 **Result on Tallyboard:** *"When a key metric moves, customers across many accounts (not just Northwind and Crestline) are trying to quickly explain why it changed, with traceable numbers, so they can answer leadership. 'AI assistant' requests are mostly a proxy for this job."* Based on INT-01, INT-03, INT-05, MET-01, MET-02, TKT-03.
 
+### 10. The Investigation station: station 3 (`49b30f1`, `c7602a5`, `3c76227`, `eedde03`)
+**Goal of the step:** check the accepted hypothesis against the evidence, so "what we believe" becomes "what the evidence shows". It hands three things to the decision brief: findings with sources, a verdict with confidence, and a next experiment with a success metric.
+
+**Product decision (the interview story):** the wireframe showed an agent proposing several tests, each approved, each running search tools, then reassessing. I asked: *"the agent already read the evidence to recommend the framework; doesn't another search-and-compare layer repeat that?"* It did. So the MVP is:
+- **One approved run.** The PM clicks Run investigation (that click is the approval). One Claude call reads every checked source and applies the framework's **procedure** to the one claim in the hypothesis. Planning chose the lens; Investigation uses it.
+- **An approvable next experiment**, so the demo still shows the agent proposing and the PM deciding.
+- **Cut:** a document-search tool (12 files fit in one call), several tests per round, Modify scope. **Trade-off:** the demo shows less step-by-step "agent at work".
+- **Concept: workflow vs agent.** In a *workflow*, my code decides the steps and the AI does the thinking inside them; in an *agent*, the AI decides its own steps. I chose a workflow with an approval gate, because approval and honesty were hard requirements.
+- Updated in order: the wireframe (I wrote the prompt for Claude Design), then the PRD (v0.4, new decision log), then CLAUDE.md. Then code.
+
+- **I1: the run.** Migration 007 adds `investigation_run`, `next_experiment` and `rejected_experiments` (JSONB on `investigations`, like the hypothesis). `run_investigation.py` sends one high-effort structured call: the problem, the framework (with procedure and expected outputs), the hypothesis and its "would challenge it if", the earlier diagnosis, and only the ticked evidence. The answer: verdict (holds / partly holds / doesn't hold), confidence, reason, and findings in five kinds: **supports, contradicts, interpretation, assumption, missing**. Guardrails: no unknown labels; supports and contradicts must cite a source. **Our code** records the sources read, the model and the seconds taken, so the activity log can't overstate what happened. First findings were 60+ words; I tightened the prompt to about 35.
+- **I2: the next experiment.** Draft, edit, approve, reject with a reason (same pattern as the hypothesis). A redraft is a quick, medium-effort call that reads the run's **findings**, not the 12 raw files, so it doesn't change findings I already reviewed. When I rejected "8 interviews" with "we can't book interviews in two weeks", it switched to existing data. When I rejected that as too long, it came back as one 39-word check. Both prompts now cap the experiment at about 60 words and one metric.
+- **I3: the screen.** The hypothesis under test; a Run card (a spinner only while the real request waits, no fake percentage; then an activity log); the verdict; findings grouped by kind with the wireframe's borders (solid = evidence, dotted = interpretation, dashed = assumption or gap); empty groups say "No contradicting evidence found"; a warning if the hypothesis, framework or ticked sources changed since the run; the experiment card. The station only opens once the hypothesis is accepted. The side panel loop fills in steps 4 to 9 and a "Still unanswered" card lists the missing findings.
+
+**Result on Tallyboard (API test):** *Partly holds, low confidence.* The writing pain is real, but its clearest evidence comes from Northwind and Crestline, the two accounts behind 9 of 14 AI requests, and smaller accounts say their time goes on *finding* data. It caught the concentrated demand (as a contradiction), the "explain why a metric moved" job (as an interpretation) and the trust concern. It did not raise willingness to pay, because the hypothesis was about the job, not pricing; the decision brief should cover it.
+
+**PM QA (Nov 17, in the app):** a fresh investigation from a blank clipboard through to an approved experiment, with no errors: 12 files uploaded, agent recommended JTBD, hypothesis drafted and accepted, run in 35 s (partly holds, medium confidence; 2 supports, 3 contradicts, 2 interpretations, 1 missing), experiment approved. The flow works end to end; I noted UX changes to make once v1 (through the decision brief) is complete.
+
 ## Concepts to be ready to explain
 | Term | One-liner |
 |---|---|
@@ -116,6 +136,11 @@ Vite dev proxy ──► FastAPI backend (:8000) ──► Postgres on Supabase
 | **Refactoring** | Restructuring code without changing what it does, then re-running the old feature to prove it |
 | **Deriving state from props** | The card resets its text boxes when a new version arrives from the backend |
 | **Status codes** | 200 worked, 400 makes no sense right now, 409 conflicts with what exists, 422 invalid data |
+| **Workflow vs agent** | A workflow: my code fixes the steps and the AI thinks inside them. An agent: the AI picks its own steps and tools |
+| **Human-in-the-loop / approval gate** | Nothing meaningful runs until the PM clicks; the click is recorded as the approval |
+| **Effort level** | How much the model deliberates: high for the investigation, medium for quick drafts |
+| **Stale result** | Saved output that no longer matches its inputs (for example after unticking a source); the UI warns instead of pretending it's current |
+| **Decision log** | Dated record of scope cuts and why, kept in the PRD |
 
 ## Rebuild checklist (for a live demo)
 ```bash
@@ -129,7 +154,7 @@ npm create vite@latest frontend -- --template react-ts
 cd frontend && npm install && npm run dev      # http://localhost:5173
 # add the /api proxy to vite.config.ts
 
-# 3. Database (Supabase SQL editor): run migrations 001 → 006 in order
+# 3. Database (Supabase SQL editor): run migrations 001 → 007 in order
 # backend/.env:
 #   DATABASE_URL=<Supabase "Session pooler" URI, password with letters/numbers only>
 #   ANTHROPIC_API_KEY=<from console.anthropic.com>
@@ -137,7 +162,8 @@ cd frontend && npm install && npm run dev      # http://localhost:5173
 # 4. Build order
 # config.py → db/connection.py → schemas/ → db/investigations.py → api/investigations.py
 # → frameworks/*.yaml + loader → agent/claude_client.py (ask_structured)
-# → agent/recommend_framework.py → agent/draft_hypothesis.py → frontend stations
+# → agent/recommend_framework.py → agent/draft_hypothesis.py
+# → agent/run_investigation.py → agent/redraft_experiment.py → frontend stations
 
 # 5. Demo data (backend running)
 cd backend && uv run python scripts/seed_case_study.py
@@ -148,6 +174,8 @@ cd backend && uv run python scripts/seed_case_study.py
 - **"Site can't be reached".** The backend simply wasn't running. A local server only answers while its terminal process is running.
 - **Duplicate seed data.** My first loader trusted a uniqueness rule that, on the live database, only applies *within an investigation*. Rows with no investigation slipped through twice. Fix: delete the duplicates carefully (checked the count before committing), then load the data as a proper investigation through the API.
 - **Scope cut mid-build.** The wireframe had a separate Hypothesis board. I asked what would be lost by cutting it, kept the essential part (the hypothesis) and dropped the rest. That's an MVP trade-off, explained in terms of what the downstream stations need.
+- **Second scope cut, by questioning overlap.** The wireframe's Investigation had a multi-test tool loop. I noticed it repeated what the Planning step had already done with the same evidence, and cut it to one approved run plus an approvable experiment. I updated the wireframe, PRD and CLAUDE.md before writing code, so design, requirements and build stayed in sync.
+- **Long AI output.** Findings and experiments came back too long to scan. Fix: explicit length limits in the prompt, checked by re-running and counting words.
 - **Working from the wrong branch.** A fresh clone only showed `main`, while the real work was on `feature/frontend`. Lesson: check `git branch -a` before deciding where you are.
 
 ## Likely interview questions
@@ -156,4 +184,6 @@ cd backend && uv run python scripts/seed_case_study.py
 - **Why does the PM approve things?** The agent recommends and the PM decides. Every suggestion can be accepted, swapped or edited.
 - **Why a known-answer case study?** It lets me check whether the agent finds the contradictions and the gap, instead of just saying "yes, build it".
 - **Why does rejecting need a reason?** The agent reads it before redrafting, so each version gets better, and the history shows how the thinking changed.
-- **What's next?** The Investigation station: the agent identifies evidence gaps, proposes tests, asks for approval, runs real tools against the specimen tray, and reassesses the hypothesis. Then the decision brief.
+- **Why not a real autonomous agent with tools?** With 12 short files, a search tool adds complexity without value, and pausing an autonomous loop for approval is hard. A workflow with an approval gate keeps the PM in control and keeps every step honest. Search comes back if the evidence grows too large for one call.
+- **How do you know the activity log is true?** The backend records what it gave the agent and how long the call took. The agent never reports its own progress.
+- **What's next?** The Results chamber: the decision brief assembled from saved state (problem, framework and rationale, hypothesis, supporting and contradicting evidence, assumptions and gaps, recommendation with confidence, and the approved next experiment).
