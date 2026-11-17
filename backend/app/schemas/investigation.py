@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.hypothesis import Hypothesis, RejectedHypothesis
+from app.schemas.investigation_run import InvestigationRun, NextExperiment, RejectedExperiment
 from app.schemas.planning import Mode, Recommendation
 
 # Must match the check constraint in migrations/002_create_investigations.sql.
@@ -45,6 +46,10 @@ class Investigation(InvestigationInput):
     recommendation: Recommendation | None  # the agent's latest recommendation (mode B)
     hypothesis: Hypothesis | None  # empty until one is drafted or written
     rejected_hypotheses: list[RejectedHypothesis]
+    # Investigation station: empty until the PM runs the investigation.
+    investigation_run: InvestigationRun | None
+    next_experiment: NextExperiment | None
+    rejected_experiments: list[RejectedExperiment]
     created_at: datetime
     updated_at: datetime
 

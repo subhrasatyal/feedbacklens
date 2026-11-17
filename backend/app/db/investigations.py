@@ -10,7 +10,9 @@ from app.schemas.investigation import EvidenceCreate, InvestigationInput
 INVESTIGATION_COLUMNS = """
     id, question, requested_by, decision_deadline, what_would_change,
     mode, framework_id, framework_inputs, recommendation,
-    hypothesis, rejected_hypotheses, created_at, updated_at
+    hypothesis, rejected_hypotheses,
+    investigation_run, next_experiment, rejected_experiments,
+    created_at, updated_at
 """
 
 EVIDENCE_COLUMNS = """
@@ -125,6 +127,21 @@ def reject_hypothesis(conn: Connection, investigation_id: UUID, rejected: dict) 
         returning {INVESTIGATION_COLUMNS}
         """,
         (Jsonb([rejected]), investigation_id),
+    ).fetchone()
+
+
+def save_investigation_run(
+    conn: Connection, investigation_id: UUID, run: dict, next_experiment: dict
+) -> dict | None:
+    """Store the latest run and the experiment it proposes (replacing earlier ones)."""
+    return conn.execute(
+        f"""
+        update investigations
+        set investigation_run = %s, next_experiment = %s, updated_at = now()
+        where id = %s
+        returning {INVESTIGATION_COLUMNS}
+        """,
+        (Jsonb(run), Jsonb(next_experiment), investigation_id),
     ).fetchone()
 
 

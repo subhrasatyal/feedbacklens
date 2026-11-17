@@ -50,13 +50,13 @@ proposition to investigate, not a finding.
 """
 
 
-def _framework_text(framework_id: str) -> str:
+def framework_text(framework_id: str) -> str:
     # The PM's questions are left out: their answers are already in the problem text.
     definition = FRAMEWORKS[framework_id].model_dump(exclude={"pm_inputs"})
     return yaml.safe_dump(definition, sort_keys=False, allow_unicode=True)
 
 
-def _diagnosis_text(recommendation: dict | None) -> str:
+def diagnosis_text(recommendation: dict | None) -> str:
     """The agent's earlier diagnosis from the Planning station, if it ran."""
     if not recommendation:
         return "None: the PM picked the framework without asking the agent to diagnose."
@@ -80,8 +80,8 @@ def draft_hypothesis(investigation: dict, evidence: list[dict]) -> HypothesisDra
     """
     prompt = (
         f"<problem>\n{problem_text(investigation)}\n</problem>\n\n"
-        f"<framework>\n{_framework_text(investigation['framework_id'])}</framework>\n\n"
-        f"<earlier_diagnosis>\n{_diagnosis_text(investigation['recommendation'])}\n</earlier_diagnosis>\n\n"
+        f"<framework>\n{framework_text(investigation['framework_id'])}</framework>\n\n"
+        f"<earlier_diagnosis>\n{diagnosis_text(investigation['recommendation'])}\n</earlier_diagnosis>\n\n"
         f"<rejected_hypotheses>\n{_rejected_text(investigation['rejected_hypotheses'])}\n</rejected_hypotheses>\n\n"
         f"<evidence_tray>\n{evidence_text(evidence)}\n</evidence_tray>\n\n"
         "Draft one testable hypothesis."

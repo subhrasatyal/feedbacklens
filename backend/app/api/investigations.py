@@ -1,4 +1,4 @@
-"""Endpoints for an investigation: its problem, specimen tray, approach and recommendation."""
+"""Endpoints for an investigation: its problem, specimen tray, approach, hypothesis and investigation run."""
 
 from datetime import datetime, timezone
 from typing import Annotated
@@ -10,6 +10,7 @@ from psycopg import Connection
 from app.agent.claude_client import AgentError, AgentNotConfigured
 from app.agent.draft_hypothesis import draft_hypothesis
 from app.agent.recommend_framework import recommend_framework
+from app.agent.run_investigation import run_investigation
 from app.db import investigations as db
 from app.db.connection import get_conn
 from app.frameworks import FRAMEWORKS, PM_QUESTIONS, missing_required_answers
@@ -217,6 +218,58 @@ def reject_hypothesis(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "There is no hypothesis to reject.")
     rejected = {**investigation["hypothesis"], "reason": data.reason, "rejected_at": _now()}
     return db.reject_hypothesis(conn, investigation_id, rejected)
+
+
+def _next_experiment_version(investigation: dict) -> int:
+    """Versions count every next experiment in the investigation, rejected ones included."""
+    versions = [e["version"] for e in investigation["rejected_experiments"]]
+    if investigation["next_experiment"]:
+        versions.append(investigation["next_experiment"]["version"])
+    return max(versions, default=0) + 1
+
+
+@router.post("/{investigation_id}/investigation/run", response_model=Investigation)
+def run_investigation_endpoint(investigation_id: UUID, conn: Connection = Depends(get_conn)):
+    """The PM's click on Run investigation: the agent tests the accepted hypothesis
+    against the checked evidence and proposes a next experiment. Takes up to a few minutes.
+    Running again replaces the previous run and its proposed experiment."""
+    investigation = _get_or_404(conn, investigation_id)
+    hypothesis = investigation["hypothesis"]
+    if hypothesis is None or hypothesis["status"] != "accepted":
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Accept a hypothesis in the Planning station before running the investigation."
+        )
+    evidence = [item for item in db.list_evidence(conn, investigation_id) if item["use_by_agent"]]
+    if not evidence:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Tick Use for at least one source so the agent has something to read."
+        )
+
+    try:
+        answer, model, seconds = run_investigation(investigation, evidence)
+    except AgentNotConfigured as error:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(error)) from error
+    except AgentError as error:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(error)) from error
+
+    run = {
+        **answer.model_dump(mode="json", exclude={"next_experiment"}),
+        "sources_read": [item["source_label"] for item in evidence],
+        "framework_id": investigation["framework_id"],
+        "hypothesis_version": hypothesis["version"],
+        "model": model,
+        "duration_seconds": seconds,
+        "ran_at": _now(),
+    }
+    next_experiment = {
+        **answer.next_experiment.model_dump(mode="json"),
+        "status": "proposed",
+        "written_by": "agent",
+        "version": _next_experiment_version(investigation),
+        "created_at": _now(),
+        "updated_at": _now(),
+    }
+    return db.save_investigation_run(conn, investigation_id, run, next_experiment)
 
 
 @router.post(
