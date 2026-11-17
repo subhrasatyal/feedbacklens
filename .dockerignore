@@ -1,0 +1,11 @@
+# Never send secrets, local installs or old builds into the Docker build.
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/.venv
+**/__pycache__
+frontend/dist
+.git
+docs
+**/.DS_Store
