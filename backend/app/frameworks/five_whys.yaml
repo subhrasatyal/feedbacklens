@@ -1,0 +1,42 @@
+# Five Whys
+# DRAFT for PM review. Edit freely: this is product content, not code.
+
+name: Five Whys
+
+what: Trace a symptom back to a root cause.
+
+use_when: A clear failure or complaint keeps repeating.
+avoid_when: Causes are many and tangled, or there's no concrete problem to start from.
+
+questions_answered:
+  - What is the specific, observable problem?
+  - Why does it happen, and why does that happen, until we reach something we can act on?
+  - Is the request a fix for the root cause or only for a symptom?
+  - Where does the chain of causes rely on guesses rather than evidence?
+
+required_inputs:
+  - A concrete, observable problem (e.g. a repeated complaint or a failing metric).
+  - Evidence about when and how it happens - support tickets, metrics, interview notes.
+
+procedure:
+  - Write the problem as one observable fact, citing the evidence that shows it.
+  - Ask "why does this happen?" and write the most likely cause, with evidence labels or marked as a guess.
+  - Repeat for each cause, usually about five times, until you reach a cause the team can change.
+  - Where a "why" has several plausible answers, note the branches instead of picking one at random.
+  - Check the chain backwards - if the root cause were fixed, would the original problem go away?
+
+expected_outputs:
+  - The chain from symptom to root cause, each step marked as evidenced (with labels) or assumed.
+  - The root cause(s) the team can act on.
+  - A judgement of whether the requested solution addresses the root cause or a symptom.
+
+failure_modes:
+  - Stopping at a cause that is really a symptom ("customers are frustrated").
+  - Following one branch when the evidence points to several causes.
+  - Filling gaps with guesses and presenting them as findings.
+  - Ending at a cause outside the team's control ("the market changed") and treating it as an answer.
+
+# Extra questions for the PM before this framework is applied (defined in pm_inputs.yaml).
+pm_inputs:
+  - id: observed_problem
+    required: true

@@ -1,0 +1,30 @@
+/* Design tokens: the colours, type and shapes from the PM's wireframe.
+   Change a value here and it changes everywhere that uses it. */
+:root {
+  /* Colours */
+  --color-accent: #4b2a6b; /* deep purple: primary buttons, current station */
+  --color-accent-dark: #2e1745;
+  --color-accent-soft: #e4dcec; /* glow around the "now" step */
+  --color-accent-tint: #f3f0fb; /* highlighted rows */
+  --color-bg: #f4f4f2; /* page background */
+  --color-surface: #ffffff; /* cards */
+  --color-surface-muted: #fafaf8; /* drop zone, notes */
+  --color-text: #1f1f1f;
+  --color-text-soft: #3a3a37;
+  --color-text-muted: #5a5a56;
+  --color-border: #d6d6d2;
+  --color-border-strong: #b5b5b0;
+  --color-border-light: #e6e6e2;
+  --color-dot: #8a8a85;
+  --color-hover: #ecece8;
+  --color-success: #1a7f37;
+  --color-error: #c62828;
+
+  /* Type */
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  /* Shapes */
+  --radius-card: 10px;
+  --radius-control: 8px;
+  --control-height: 44px; /* comfortable click/tap target */
+}

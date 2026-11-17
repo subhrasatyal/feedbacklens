@@ -1,0 +1,46 @@
+# Steelman vs Strawman
+# DRAFT for PM review. Edit freely: this is product content, not code.
+
+name: Steelman vs Strawman
+
+what: Build the strongest opposing case before committing.
+
+use_when: The team is converging on an answer quickly and the opposing view hasn't been tested.
+avoid_when: There's no position yet to argue against.
+
+questions_answered:
+  - What is the strongest honest case against the direction we're leaning towards?
+  - Which of our arguments are actually weak versions of the other side (strawmen)?
+  - What evidence would the best critic point to?
+  - After hearing the strongest case, do we still hold our position, and how confident are we?
+
+required_inputs:
+  - The current position or proposed decision, stated plainly.
+  - Evidence that could support either side.
+  - Optional - the objections that have already been raised, and by whom.
+
+procedure:
+  - State the current position in one sentence.
+  - Write the opposing position as its strongest supporter would - specific, fair, and backed by evidence where possible.
+  - List the evidence for each side, citing labels, and mark any evidence that cuts both ways.
+  - Identify where the team's current arguments rely on a weakened version of the opposing view.
+  - Decide which disagreements are about facts (can be tested) and which are about values or priorities.
+  - Restate the position - unchanged, narrowed, or reversed - with a confidence level.
+
+expected_outputs:
+  - The strongest case for and against, each with evidence labels.
+  - The key factual disagreements that could be tested.
+  - A revised position and confidence level, with what would change it.
+
+failure_modes:
+  - Writing a weak opposing case that's easy to dismiss (a strawman of the steelman).
+  - Treating "both sides have points" as a conclusion instead of deciding.
+  - Arguing from opinion when evidence is available.
+  - Mixing up "the critic is wrong" with "the critic is unpopular".
+
+# Extra questions for the PM before this framework is applied (defined in pm_inputs.yaml).
+pm_inputs:
+  - id: proposed_direction
+    required: true
+  - id: known_objections
+    required: false

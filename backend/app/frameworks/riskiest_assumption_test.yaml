@@ -1,0 +1,47 @@
+# Riskiest Assumption Test (RAT)
+# DRAFT for PM review. Edit freely: this is product content, not code.
+
+name: Riskiest Assumption Test
+
+what: Design one focused test for the belief most likely to sink the plan.
+
+use_when: A direction has been chosen and needs de-risking before committing resources.
+avoid_when: The problem isn't framed yet, or there are many competing directions.
+
+questions_answered:
+  - Which single assumption, if wrong, would most likely make this direction fail?
+  - What is the smallest, fastest test that could show whether it holds?
+  - What result would count as a pass, and what would make us stop or change course?
+
+required_inputs:
+  - The chosen direction and the assumptions behind it.
+  - Evidence that bears on those assumptions.
+  - Constraints on testing (time until the decision deadline, budget, access to customers).
+
+procedure:
+  - List the key assumptions behind the direction, with the evidence for each (citing labels).
+  - Choose the riskiest one - most important to success and least supported by evidence - and explain why.
+  - Design the smallest test that could prove it wrong (e.g. a fake-door test, a concierge trial, targeted interviews, a data pull).
+  - Define the success metric and a pass/fail threshold before the test runs.
+  - Note what the team will do after a pass and after a fail.
+
+expected_outputs:
+  - The riskiest assumption, with the reasoning and evidence behind the choice.
+  - One proposed test, with its method, sample, duration and cost.
+  - A success metric with a pass/fail threshold.
+  - The decision each outcome would lead to.
+
+failure_modes:
+  - Testing an assumption that is easy rather than risky.
+  - Designing a test that can only confirm, never disprove.
+  - Setting the success threshold after seeing the results.
+  - Building a big prototype when a cheaper test would answer the question.
+
+# Extra questions for the PM before this framework is applied (defined in pm_inputs.yaml).
+pm_inputs:
+  - id: proposed_direction
+    required: true
+  - id: constraints
+    required: false
+  - id: customer_access
+    required: false
