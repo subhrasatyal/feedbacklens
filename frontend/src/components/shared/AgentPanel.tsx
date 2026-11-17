@@ -1,5 +1,5 @@
 import type { Investigation, InvestigationDetail } from '../../api/investigations'
-import { LOOP_STEPS } from './stations'
+import { LOOP_STEPS, VERDICT_NAMES } from './stations'
 
 type Props = {
   investigation: InvestigationDetail | null
@@ -7,6 +7,8 @@ type Props = {
   frameworkNames: Record<string, string> // framework id -> display name
   recommending: boolean // a recommendation request is running right now
   drafting: boolean // a hypothesis-draft request is running right now
+  running: boolean // an investigation run is waiting for the agent right now
+  redrafting: boolean // a next-experiment redraft is waiting right now
   recent: Investigation[]
   onOpen: (id: string) => void
   onNew: () => void
@@ -14,14 +16,20 @@ type Props = {
 
 type LoopState = { step: string; state: 'todo' | 'now' | 'done' | 'skipped'; note: string }
 
+// The live requests that are waiting for the agent right now.
+type Busy = { recommending: boolean; drafting: boolean; running: boolean; redrafting: boolean }
+
 // Where each loop step stands, worked out only from saved state and the live requests.
-// Steps after "Form hypothesis" aren't built, so they always show as not started.
+// In the MVP, "Identify evidence gaps", "Execute tools" and "Reassess" all happen inside
+// one approved run, so they change together.
 function loopStates(
   investigation: InvestigationDetail | null,
-  recommending: boolean,
-  drafting: boolean,
+  { recommending, drafting, running, redrafting }: Busy,
   names: Record<string, string>,
 ): LoopState[] {
+  const accepted = investigation?.hypothesis?.status === 'accepted'
+  const run = investigation?.investigation_run ?? null
+  const experiment = investigation?.next_experiment ?? null
   const rec = investigation?.recommendation ?? null
   const savedId = investigation?.framework_id ?? null
   const nameOf = (id: string) => names[id] ?? id
@@ -46,6 +54,28 @@ function loopStates(
       if (hyp) return { step, state: 'now', note: `Draft v${hyp.version}` }
       if (savedId) return { step, state: 'now', note: 'Next' }
     }
+    if (step === 'Propose investigation' && (accepted || run)) {
+      return { step, state: 'done', note: 'Shown on station 3' }
+    }
+    if (step === 'Request approval') {
+      if (running || run) return { step, state: 'done', note: 'You approved the run' }
+      if (accepted) return { step, state: 'now', note: 'Waiting for you' }
+    }
+    if (step === 'Identify evidence gaps' || step === 'Execute tools' || step === 'Reassess') {
+      if (running) return { step, state: 'now', note: 'Running' }
+      if (run && step === 'Identify evidence gaps') {
+        const gaps = run.findings.filter((f) => f.kind === 'missing' || f.kind === 'assumption').length
+        return { step, state: 'done', note: `${gaps} gap${gaps === 1 ? '' : 's'} or assumption${gaps === 1 ? '' : 's'}` }
+      }
+      if (run && step === 'Execute tools') return { step, state: 'done', note: `Read ${run.sources_read.length} sources` }
+      if (run) return { step, state: 'done', note: VERDICT_NAMES[run.verdict] }
+    }
+    if (step === 'Recommend next step' && run && !running) {
+      if (redrafting) return { step, state: 'now', note: 'Redrafting' }
+      if (experiment?.status === 'approved') return { step, state: 'done', note: `You approved v${experiment.version}` }
+      if (experiment) return { step, state: 'now', note: `Proposal v${experiment.version}` }
+      return { step, state: 'now', note: 'Rejected' }
+    }
     return { step, state: 'todo', note: '' }
   })
 }
@@ -54,8 +84,7 @@ function loopStates(
 function agentMessage(
   investigation: InvestigationDetail | null,
   availableCount: number,
-  recommending: boolean,
-  drafting: boolean,
+  { recommending, drafting, running, redrafting }: Busy,
   names: Record<string, string>,
 ) {
   if (investigation === null) {
@@ -74,8 +103,26 @@ function agentMessage(
     return `Drafting a hypothesis with ${framework}, reading ${sources}…`
   }
   const hyp = investigation.hypothesis
+  if (running) {
+    return `Testing hypothesis v${hyp?.version} with ${framework}, reading ${sources}…`
+  }
+  if (redrafting) {
+    return 'Drafting a new next experiment from my findings and your reasons…'
+  }
+  const run = investigation.investigation_run
+  if (run) {
+    const verdict = `${VERDICT_NAMES[run.verdict]} (${run.confidence} confidence)`
+    const experiment = investigation.next_experiment
+    if (experiment?.status === 'approved') {
+      return `Investigation finished: ${verdict}. You approved next experiment v${experiment.version}. The decision brief (station 4) isn't built yet.`
+    }
+    if (experiment) {
+      return `Investigation finished: ${verdict}. Review the next experiment: approve it, edit it, or reject it with a reason.`
+    }
+    return `Investigation finished: ${verdict}. You rejected the last experiment. I can draft a new one, or you can write your own.`
+  }
   if (hyp?.status === 'accepted') {
-    return `You accepted hypothesis v${hyp.version}. It's still untested. Next I'd work out what evidence would support or challenge it, but the investigation station isn't built yet.`
+    return `You accepted hypothesis v${hyp.version}. It's still untested. Next, run the investigation: I'll read ${sources} and apply ${framework}.`
   }
   if (hyp && hyp.written_by === 'agent') {
     const cited = hyp.based_on.length
@@ -102,16 +149,22 @@ function AgentPanel({
   frameworkNames,
   recommending,
   drafting,
+  running,
+  redrafting,
   recent,
   onOpen,
   onNew,
 }: Props) {
+  const busy = { recommending, drafting, running, redrafting }
+  // Missing information from the latest run: what the evidence couldn't answer.
+  const missing = investigation?.investigation_run?.findings.filter((f) => f.kind === 'missing') ?? []
+
   return (
     <aside className="side" aria-label="Agent status">
       <section className="card">
         <span className="eyebrow">Investigation loop</span>
         <ol className="loop">
-          {loopStates(investigation, recommending, drafting, frameworkNames).map(({ step, state, note }) => (
+          {loopStates(investigation, busy, frameworkNames).map(({ step, state, note }) => (
             <li key={step} className={`loop-item ${state}`}>
               <span className="dot" aria-hidden="true" />
               <span className="loop-step">{step}</span>
@@ -123,8 +176,20 @@ function AgentPanel({
 
       <section className="card">
         <span className="eyebrow">Agent</span>
-        <p className="agent-message">{agentMessage(investigation, availableCount, recommending, drafting, frameworkNames)}</p>
+        <p className="agent-message">{agentMessage(investigation, availableCount, busy, frameworkNames)}</p>
       </section>
+
+      {missing.length > 0 && (
+        <section className="card">
+          <span className="eyebrow">Still unanswered</span>
+          {missing.map((finding, index) => (
+            <div key={index} className="finding missing">
+              <p>{finding.statement}</p>
+              <span className="tag dashed">Not in tray</span>
+            </div>
+          ))}
+        </section>
+      )}
 
       <section className="card">
         <div className="card-header">

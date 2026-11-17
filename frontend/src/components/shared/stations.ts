@@ -1,10 +1,12 @@
+import type { Verdict } from '../../api/investigations'
+
 // The stations of an investigation, in order. The wireframe's separate Hypothesis
 // board was cut for the MVP: the hypothesis is a card at the end of the Planning station.
 // `built` is false until a station exists, so the step bar can't open it.
 export const STATIONS = [
   { id: 'clipboard', title: 'Clipboard', sub: 'Problem & evidence', built: true },
   { id: 'planning', title: 'Planning station', sub: 'Approach & hypothesis', built: true },
-  { id: 'investigation', title: 'Investigation', sub: 'Run approved tests', built: false },
+  { id: 'investigation', title: 'Investigation', sub: 'Test the hypothesis', built: true },
   { id: 'results', title: 'Results chamber', sub: 'Decision brief', built: false },
 ] as const
 
@@ -22,3 +24,10 @@ export const LOOP_STEPS = [
   'Reassess',
   'Recommend next step',
 ] as const
+
+// How the investigation's verdict is shown to the PM.
+export const VERDICT_NAMES: Record<Verdict, string> = {
+  holds: 'Holds',
+  partly_holds: 'Partly holds',
+  does_not_hold: "Doesn't hold",
+}

@@ -1,6 +1,7 @@
 import AgentPanel from '../components/shared/AgentPanel'
 import AppShell from '../components/shared/AppShell'
 import ClipboardStation from '../components/shared/ClipboardStation'
+import InvestigationStation from '../components/shared/InvestigationStation'
 import PlanningStation from '../components/shared/PlanningStation'
 import StationNav from '../components/shared/StationNav'
 import { STATIONS, type StationId } from '../components/shared/stations'
@@ -18,15 +19,24 @@ function ClassicView() {
   // The planning station needs a saved problem and at least one source the agent may read.
   const canPlan = investigation !== null && availableCount > 0
 
+  // The investigation station also needs an accepted hypothesis to test.
+  const canInvestigate = canPlan && investigation?.hypothesis?.status === 'accepted'
+
   function isOpenable(id: StationId): boolean {
     const station = STATIONS.find((s) => s.id === id)
     if (!station?.built) return false
     if (id === 'planning') return canPlan
+    if (id === 'investigation') return canInvestigate
     return true
   }
 
-  // Never show a station that can't be opened (e.g. after unchecking every source).
-  const station: StationId = isOpenable(lab.station) ? lab.station : 'clipboard'
+  // Never show a station that can't be opened (e.g. after unchecking every source,
+  // or editing the hypothesis back to a draft): fall back to the nearest one that can.
+  const station: StationId = isOpenable(lab.station)
+    ? lab.station
+    : lab.station === 'investigation' && canPlan
+      ? 'planning'
+      : 'clipboard'
 
   return (
     <AppShell
@@ -39,6 +49,8 @@ function ClassicView() {
           frameworkNames={frameworkNames}
           recommending={lab.recommending}
           drafting={lab.drafting}
+          running={lab.running}
+          redrafting={lab.redrafting}
           recent={lab.recent}
           onOpen={lab.open}
           onNew={lab.startNew}
@@ -59,6 +71,21 @@ function ClassicView() {
           onRemoveEvidence={lab.removeEvidence}
           onContinue={() => lab.goToStation('planning')}
         />
+      ) : station === 'investigation' ? (
+        investigation && (
+          <InvestigationStation
+            key={investigation.id}
+            investigation={investigation}
+            frameworkNames={frameworkNames}
+            running={lab.running}
+            redrafting={lab.redrafting}
+            onRun={lab.runInvestigation}
+            onDraftExperiment={lab.draftExperiment}
+            onSaveExperiment={lab.saveExperiment}
+            onApproveExperiment={lab.approveExperiment}
+            onRejectExperiment={lab.rejectExperiment}
+          />
+        )
       ) : (
         investigation && (
           // The key resets the station's choices when a different investigation opens.
@@ -75,6 +102,7 @@ function ClassicView() {
             onSaveHypothesis={lab.saveHypothesis}
             onAcceptHypothesis={lab.acceptHypothesis}
             onRejectHypothesis={lab.rejectHypothesis}
+            onContinue={() => lab.goToStation('investigation')}
           />
         )
       )}

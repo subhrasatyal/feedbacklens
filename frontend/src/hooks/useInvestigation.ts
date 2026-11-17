@@ -2,19 +2,25 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   acceptHypothesis as acceptHypothesisRequest,
   addEvidence as addEvidenceRequest,
+  approveExperiment as approveExperimentRequest,
   createInvestigation,
   deleteEvidence,
+  draftExperiment as draftExperimentRequest,
   draftHypothesis as draftHypothesisRequest,
   getInvestigation,
   listInvestigations,
+  rejectExperiment as rejectExperimentRequest,
   rejectHypothesis as rejectHypothesisRequest,
   requestRecommendation as requestRecommendationRequest,
+  runInvestigation as runInvestigationRequest,
   saveApproach as saveApproachRequest,
+  saveExperiment as saveExperimentRequest,
   saveHypothesis as saveHypothesisRequest,
   setEvidenceUse as setEvidenceUseRequest,
   updateInvestigation,
   type ApproachInput,
   type EvidenceCreate,
+  type ExperimentEdit,
   type HypothesisEdit,
   type Investigation,
   type InvestigationDetail,
@@ -53,6 +59,10 @@ export function useInvestigation() {
   const [recommending, setRecommending] = useState(false)
   // True only while a real hypothesis-draft request is waiting for the agent.
   const [drafting, setDrafting] = useState(false)
+  // True only while a real investigation run is waiting for the agent.
+  const [running, setRunning] = useState(false)
+  // True only while a real next-experiment redraft is waiting for the agent.
+  const [redrafting, setRedrafting] = useState(false)
 
   // Fetch one investigation. State only changes once the reply arrives.
   const load = useCallback((id: string) => {
@@ -182,6 +192,44 @@ export function useInvestigation() {
     applyUpdate(investigation.id, await rejectHypothesisRequest(investigation.id, reason))
   }
 
+  // Investigation station actions. Errors go back to the caller, which shows them on the card.
+  async function runInvestigation() {
+    if (investigation === null) return
+    const id = investigation.id
+    setRunning(true)
+    try {
+      applyUpdate(id, await runInvestigationRequest(id))
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  async function draftExperiment() {
+    if (investigation === null) return
+    const id = investigation.id
+    setRedrafting(true)
+    try {
+      applyUpdate(id, await draftExperimentRequest(id))
+    } finally {
+      setRedrafting(false)
+    }
+  }
+
+  async function saveExperiment(input: ExperimentEdit) {
+    if (investigation === null) return
+    applyUpdate(investigation.id, await saveExperimentRequest(investigation.id, input))
+  }
+
+  async function approveExperiment() {
+    if (investigation === null) return
+    applyUpdate(investigation.id, await approveExperimentRequest(investigation.id))
+  }
+
+  async function rejectExperiment(reason: string) {
+    if (investigation === null) return
+    applyUpdate(investigation.id, await rejectExperimentRequest(investigation.id, reason))
+  }
+
   // Add evidence to the open investigation's specimen tray. Errors go back to the caller.
   async function addEvidence(items: EvidenceCreate[]) {
     if (investigation === null) return
@@ -221,6 +269,8 @@ export function useInvestigation() {
     recent,
     recommending,
     drafting,
+    running,
+    redrafting,
     goToStation,
     open,
     startNew,
@@ -231,6 +281,11 @@ export function useInvestigation() {
     saveHypothesis,
     acceptHypothesis,
     rejectHypothesis,
+    runInvestigation,
+    draftExperiment,
+    saveExperiment,
+    approveExperiment,
+    rejectExperiment,
     addEvidence,
     setEvidenceUse,
     removeEvidence,

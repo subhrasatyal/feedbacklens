@@ -62,6 +62,47 @@ export type RejectedHypothesis = Hypothesis & { reason: string; rejected_at: str
 // What the PM sends to write or edit the hypothesis.
 export type HypothesisEdit = { statement: string; challenge_if: string }
 
+// The Investigation station. Mirrors backend/app/schemas/investigation_run.py.
+// Evidence is split into supports / contradicts, kept apart from interpretation,
+// assumptions and missing information.
+export type FindingKind = 'supports' | 'contradicts' | 'interpretation' | 'assumption' | 'missing'
+export type Verdict = 'holds' | 'partly_holds' | 'does_not_hold'
+
+export type Finding = { kind: FindingKind; statement: string; evidence_refs: string[] }
+
+// The latest run. The last six fields record what really ran (set by the backend, not the agent).
+export type InvestigationRun = {
+  verdict: Verdict
+  confidence: 'low' | 'medium' | 'high'
+  verdict_reason: string
+  verdict_refs: string[]
+  findings: Finding[]
+  sources_read: string[] // labels of every checked source given to the agent
+  framework_id: string
+  hypothesis_version: number
+  model: string
+  duration_seconds: number
+  ran_at: string
+}
+
+// What the PM sends to write or edit the next experiment.
+export type ExperimentEdit = {
+  title: string
+  experiment: string
+  why: string
+  success_metric: string
+}
+
+export type NextExperiment = ExperimentEdit & {
+  status: 'proposed' | 'approved'
+  written_by: 'agent' | 'pm'
+  version: number // counts every experiment in the investigation, rejected ones too
+  created_at: string
+  updated_at: string
+}
+
+export type RejectedExperiment = NextExperiment & { reason: string; rejected_at: string }
+
 export type Investigation = InvestigationInput & {
   id: string
   // Empty until an approach is saved at the Planning station.
@@ -71,6 +112,10 @@ export type Investigation = InvestigationInput & {
   recommendation: Recommendation | null // the agent's latest recommendation, if asked for
   hypothesis: Hypothesis | null // empty until one is drafted or written
   rejected_hypotheses: RejectedHypothesis[] // oldest first
+  // Investigation station: empty until the PM runs the investigation.
+  investigation_run: InvestigationRun | null
+  next_experiment: NextExperiment | null
+  rejected_experiments: RejectedExperiment[] // oldest first
   created_at: string
   updated_at: string
 }
@@ -187,6 +232,49 @@ export async function acceptHypothesis(id: string): Promise<Investigation> {
 // Move the current hypothesis to the rejected list, with the PM's reason.
 export async function rejectHypothesis(id: string, reason: string): Promise<Investigation> {
   const response = await fetch(`/api/investigations/${id}/hypothesis/reject`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  })
+  await throwIfFailed(response)
+  return response.json()
+}
+
+// The PM's Run investigation click: the agent tests the accepted hypothesis against the
+// checked evidence and proposes a next experiment. One Claude call: usually about 30 seconds.
+export async function runInvestigation(id: string): Promise<Investigation> {
+  const response = await fetch(`/api/investigations/${id}/investigation/run`, { method: 'POST' })
+  await throwIfFailed(response)
+  return response.json()
+}
+
+// After a rejection: the agent proposes a new next experiment from its findings. About 15 seconds.
+export async function draftExperiment(id: string): Promise<Investigation> {
+  const response = await fetch(`/api/investigations/${id}/next-experiment/draft`, { method: 'POST' })
+  await throwIfFailed(response)
+  return response.json()
+}
+
+// Write a next experiment, or edit the current one (any edit makes it a proposal again).
+export async function saveExperiment(id: string, input: ExperimentEdit): Promise<Investigation> {
+  const response = await fetch(`/api/investigations/${id}/next-experiment`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  await throwIfFailed(response)
+  return response.json()
+}
+
+export async function approveExperiment(id: string): Promise<Investigation> {
+  const response = await fetch(`/api/investigations/${id}/next-experiment/approve`, { method: 'POST' })
+  await throwIfFailed(response)
+  return response.json()
+}
+
+// Move the current next experiment to the rejected list, with the PM's reason.
+export async function rejectExperiment(id: string, reason: string): Promise<Investigation> {
+  const response = await fetch(`/api/investigations/${id}/next-experiment/reject`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ reason }),

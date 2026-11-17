@@ -23,6 +23,7 @@ type Props = {
   onSaveHypothesis: (input: HypothesisEdit) => Promise<void>
   onAcceptHypothesis: () => Promise<void>
   onRejectHypothesis: (reason: string) => Promise<void>
+  onContinue: () => void // go to the investigation station
 }
 
 const MODES: { value: Mode; title: string; detail: string }[] = [
@@ -47,6 +48,7 @@ function PlanningStation({
   onSaveHypothesis,
   onAcceptHypothesis,
   onRejectHypothesis,
+  onContinue,
 }: Props) {
   // Start from what's saved, so reopening the station shows the saved choice.
   const [mode, setMode] = useState<Mode | null>(investigation.mode)
@@ -248,6 +250,14 @@ function PlanningStation({
           onAccept={onAcceptHypothesis}
           onReject={onRejectHypothesis}
         />
+      )}
+
+      {investigation.hypothesis?.status === 'accepted' && (
+        <div className="actions">
+          <button type="button" className="btn pri" onClick={onContinue}>
+            Next: run the investigation
+          </button>
+        </div>
       )}
     </>
   )
