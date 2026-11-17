@@ -1,9 +1,9 @@
 # Recap: The Product Lab, so far
 
-*Last updated: November 17, 2026 (after the Investigation station). Covers branch `feature/frontend`.*
+*Last updated: November 17, 2026 (v1 complete end to end, after the decision brief). Covers branch `feature/frontend`.*
 
 ## Pitch (30 seconds)
-The Product Lab helps a product manager go from a vague question ("Several customers have requested an AI assistant. Should we build one?") to a decision brief backed by evidence. The PM writes down the problem and drops customer evidence into a "specimen tray". An AI agent then diagnoses the problem, recommends a thinking framework, drafts a testable hypothesis, and (once the PM approves) tests it against the evidence, returning a verdict, sourced findings and a next experiment. The PM approves each step and makes the final call. The agent never claims anything the evidence doesn't show.
+The Product Lab helps a product manager go from a vague question ("Several customers have requested an AI assistant. Should we build one?") to a decision brief backed by evidence. The PM writes down the problem and drops customer evidence into a "specimen tray". An AI agent then diagnoses the problem, recommends a thinking framework, drafts a testable hypothesis, and (once the PM approves) tests it against the evidence, returning a verdict, sourced findings and a next experiment. Finally it writes a decision brief that answers the original question, and the PM records the final call. The PM approves each step. The agent never claims anything the evidence doesn't show.
 
 ## Where things stand
 | Station | What it does | Status |
@@ -11,11 +11,14 @@ The Product Lab helps a product manager go from a vague question ("Several custo
 | 1. Clipboard | Problem statement + specimen tray (evidence) | Built |
 | 2. Planning station | Pick a framework (or let the agent recommend one), then form the hypothesis | Built and QA'd |
 | 3. Investigation | One approved run tests the hypothesis; the PM approves the next experiment | Built and QA'd (changes planned after v1) |
-| 4. Results chamber | Decision brief | Next |
+| 4. Results chamber | Decision brief: agent recommendation + PM's recorded decision | Built and QA'd |
+
+**v1 works end to end** (Nov 17): blank clipboard → evidence → framework → hypothesis → investigation → approved experiment → decision brief → PM decision. Next: my list of UX changes, then merge into `main`.
 
 Two scope cuts, both recorded in the PRD's decision log (§16):
 - **Nov 13:** the separate "Hypothesis board" station became a card at the end of the Planning station.
 - **Nov 17:** the Investigation station became one approved run instead of a multi-test tool loop.
+- **Nov 17:** the decision brief deferred "Compare runs" (Run A vs Run B side by side), the lab/plain toggle and file export.
 
 **Branches:** `main` has only the early skeleton. All current work is on `feature/frontend`, which will be merged into `main` through a pull request once QA is done.
 
@@ -113,6 +116,20 @@ Vite dev proxy ──► FastAPI backend (:8000) ──► Postgres on Supabase
 
 **PM QA (Nov 17, in the app):** a fresh investigation from a blank clipboard through to an approved experiment, with no errors: 12 files uploaded, agent recommended JTBD, hypothesis drafted and accepted, run in 35 s (partly holds, medium confidence; 2 supports, 3 contradicts, 2 interpretations, 1 missing), experiment approved. The flow works end to end; I noted UX changes to make once v1 (through the decision brief) is complete.
 
+### 11. The decision brief: station 4 (`65274cd`, `1f2cad2`, `57ca5fa`)
+**Goal of the step:** one readable brief that answers the original question, with everything traceable.
+
+**Key insight (the interview story):** almost everything the PRD asks the brief to contain was *already saved and approved by me*: problem, framework and rationale, hypothesis, verdict, findings, approved experiment. Only one thing was missing: **the recommendation**. The investigation's *verdict* answers "does the hypothesis hold?"; the *recommendation* answers "what should we do?". They're different questions, so the brief needs exactly one new agent call, and everything else is layout.
+
+**Wireframe first:** I listed what had to change on the Results board (cut the lab/plain toggle, Export and Compare runs; add Generate brief, "Your decision", an Interpretation box, Sources cited, an out-of-date warning; replace placeholder copy and the old "3 approved tests" side panel). I gave Claude Design a prompt, checked the result, then updated the PRD (§5 Step 5, decision log).
+
+- **R1: backend.** Migration 008 adds `decision_brief` (the agent's recommendation) and `pm_decision` (my call). `write_brief.py` is one medium-effort call that reads the hypothesis, verdict, findings and approved experiment, **not the raw evidence**, so it can't drift from what I reviewed. Guardrail: it may only cite labels the findings already cite. The brief stores which run and experiment version it was written from, so the screen can tell when it's out of date. `PUT /decision`: follow or differ; **a note is required when I overrule the agent**. Regenerating clears my decision, because that decision answered the old recommendation. The reasoning came back at 81 words; I capped it at about 60.
+- **R2: screen.** Opens only after the experiment is approved. Generate brief (spinner only while the real request waits); the recommendation card with a confidence bar and its reason, "What would change this", Regenerate, the out-of-date warning, "Your decision" and links back to stations 2 and 3; problem and framework cards; hypothesis with verdict; the evidence grid (supporting, contradicting, interpretation, assumptions and gaps); the approved experiment; **Sources cited** with the real titles; **Copy brief** as plain text. The side panel's "What I did" is built from counts our backend recorded.
+
+**Result on my fresh "AI chatbot" investigation:** *"Don't build a general AI chatbot or clear Q1 for it yet. Run the concierge test first, then decide whether to build a narrower traceable change breakdown that extends 'Explain this change'."* Medium confidence: a handful of interviews, and the jobs behind 4 of the 6 AI requests are unknown.
+
+**PM QA (Nov 17, in the app):** generated the brief, tried to save "Decide differently" without a note (blocked), saved a decision, regenerated (decision cleared), saved again. All requests succeeded.
+
 ## Concepts to be ready to explain
 | Term | One-liner |
 |---|---|
@@ -141,6 +158,9 @@ Vite dev proxy ──► FastAPI backend (:8000) ──► Postgres on Supabase
 | **Effort level** | How much the model deliberates: high for the investigation, medium for quick drafts |
 | **Stale result** | Saved output that no longer matches its inputs (for example after unticking a source); the UI warns instead of pretending it's current |
 | **Decision log** | Dated record of scope cuts and why, kept in the PRD |
+| **Verdict vs recommendation** | The verdict judges the hypothesis; the recommendation answers the original business question |
+| **Single source of truth** | The brief re-reads saved, approved data instead of copying it, so it can't disagree with the stations |
+| **Provenance** | Recording what an output was made from (run time, experiment version) so you can tell when it's out of date |
 
 ## Rebuild checklist (for a live demo)
 ```bash
@@ -154,7 +174,7 @@ npm create vite@latest frontend -- --template react-ts
 cd frontend && npm install && npm run dev      # http://localhost:5173
 # add the /api proxy to vite.config.ts
 
-# 3. Database (Supabase SQL editor): run migrations 001 → 007 in order
+# 3. Database (Supabase SQL editor): run migrations 001 → 008 in order
 # backend/.env:
 #   DATABASE_URL=<Supabase "Session pooler" URI, password with letters/numbers only>
 #   ANTHROPIC_API_KEY=<from console.anthropic.com>
@@ -163,7 +183,8 @@ cd frontend && npm install && npm run dev      # http://localhost:5173
 # config.py → db/connection.py → schemas/ → db/investigations.py → api/investigations.py
 # → frameworks/*.yaml + loader → agent/claude_client.py (ask_structured)
 # → agent/recommend_framework.py → agent/draft_hypothesis.py
-# → agent/run_investigation.py → agent/redraft_experiment.py → frontend stations
+# → agent/run_investigation.py → agent/redraft_experiment.py → agent/write_brief.py
+# → frontend stations 1 → 4
 
 # 5. Demo data (backend running)
 cd backend && uv run python scripts/seed_case_study.py
@@ -176,6 +197,7 @@ cd backend && uv run python scripts/seed_case_study.py
 - **Scope cut mid-build.** The wireframe had a separate Hypothesis board. I asked what would be lost by cutting it, kept the essential part (the hypothesis) and dropped the rest. That's an MVP trade-off, explained in terms of what the downstream stations need.
 - **Second scope cut, by questioning overlap.** The wireframe's Investigation had a multi-test tool loop. I noticed it repeated what the Planning step had already done with the same evidence, and cut it to one approved run plus an approvable experiment. I updated the wireframe, PRD and CLAUDE.md before writing code, so design, requirements and build stayed in sync.
 - **Long AI output.** Findings and experiments came back too long to scan. Fix: explicit length limits in the prompt, checked by re-running and counting words.
+- **Spotting that most of the brief already existed.** Instead of asking the AI to write a whole report (slow, and it could contradict what I approved), I assembled the brief from saved data and asked the AI for the one missing judgment.
 - **Working from the wrong branch.** A fresh clone only showed `main`, while the real work was on `feature/frontend`. Lesson: check `git branch -a` before deciding where you are.
 
 ## Likely interview questions
@@ -186,4 +208,6 @@ cd backend && uv run python scripts/seed_case_study.py
 - **Why does rejecting need a reason?** The agent reads it before redrafting, so each version gets better, and the history shows how the thinking changed.
 - **Why not a real autonomous agent with tools?** With 12 short files, a search tool adds complexity without value, and pausing an autonomous loop for approval is hard. A workflow with an approval gate keeps the PM in control and keeps every step honest. Search comes back if the evidence grows too large for one call.
 - **How do you know the activity log is true?** The backend records what it gave the agent and how long the call took. The agent never reports its own progress.
-- **What's next?** The Results chamber: the decision brief assembled from saved state (problem, framework and rationale, hypothesis, supporting and contradicting evidence, assumptions and gaps, recommendation with confidence, and the approved next experiment).
+- **Why doesn't the AI write the whole brief?** Everything except the recommendation was already approved by the PM. Re-generating it would be slower and could contradict what the PM signed off. So the brief reads saved data, and the AI writes only the recommendation, citing only labels the findings already cite.
+- **What if the PM disagrees with the agent?** They choose "Decide differently" and must say why. The brief records the PM's call next to the agent's recommendation.
+- **What's next?** UX changes from my own end-to-end testing, then merging `feature/frontend` into `main` and deploying on Render. Later: Compare runs, the lab theme and tests.
